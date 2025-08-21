@@ -1,0 +1,121 @@
+services:
+  backend:
+    build:
+      context: ./containers/backend
+      target: development
+    ports:
+      - "5000:5000"
+    networks:
+      - mailpit
+    volumes:
+      - ./containers/backend/application:/application
+    env_file:
+      - ./containers/backend/application/.env.local
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthcheck"] 
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 25s 
+
+  database:
+    build:
+      context: ./containers/database
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/database/data:/var/lib/postgresql/data
+    env_file:
+      - ./containers/database/.env.local
+
+  frontend:
+    build:
+      context: ./containers/frontend
+      target: development
+    ports:
+      - 5173:5173
+    # volumes:
+    #   - ./containers/frontend:/app
+    env_file:
+      - ./containers/frontend/.env.local
+
+  mailpit:
+
+  redis:
+    build:
+      context: ./containers/redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./volumes/redis/redis-data:/data 
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+
+  celery-worker:
+    build:
+      context: ./containers/celery-worker
+      target: development
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./containers/backend/application:/app
+    env_file:
+      - ./containers/backend/application/.env.local
+
+  celery-beat:
+    build:
+      context: ./containers/celery-beat
+      target: development
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./containers/backend/application:/app
+    env_file:
+      - ./containers/backend/application/.env.local
+
+  celery-flower:
+    build:
+      context: ./containers/celery-flower
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    ports:
+      - "5555:5555"
+    env_file:
+      - ./containers/backend/application/.env.local
+    restart: always
+    volumes:
+      - ./containers/backend/application:/app
+    networks:
+      - redis
+      - database
+
+  caddy:
+    build:
+      context: ./containers/caddy
+      target: development
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./containers/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./volumes/caddy/data:/data
+      - ./volumes/caddy/config:/config
+    networks:
+      - backend
+      - frontend
+
+networks:
+  mailpit:
+

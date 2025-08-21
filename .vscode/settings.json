@@ -1,0 +1,14 @@
+{
+    "conventionalCommits.scopes": [
+        "infrastructure",
+        "frontend",
+        "backend",
+        "fullstack"
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "node_modules": true,
+        "venv": true,
+        "**/__pycache__": true
+    }
+}

@@ -1,0 +1,11 @@
+Hola {{ user.email }},
+
+{{ inviting_user_email }} te ha invitado a unirte a la organización '{{ organization_name }}'.
+
+Para aceptar la invitación, visita:
+{{ accept_invitation_url }}
+
+Si tu cuenta no está aún activada, primero completa el proceso de creación de cuenta (revisa tu email).
+
+Saludos,
+El equipo de CVE-Sentinel

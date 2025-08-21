@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if context == 'new_product' %}
+            Producto Añadido y Nuevas Alertas
+        {% else %}
+            Nuevas Alertas Detectadas
+        {% endif %}
+    </title>
+    <style>
+        body {
+            margin: 0; 
+            padding: 0; 
+            background-color: #f9fafb; /* Gris muy claro */
+            font-family: Arial, Helvetica, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .email-container {
+            max-width: 700px;
+            margin: 30px auto;
+            background-color: #ffffff; /* Blanco */
+            border-radius: 8px;
+            border: 1px solid #e5e7eb; /* Gris claro */
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1f2937; /* Gris oscuro/negro */
+            /* {% if context == 'new_product' %}#1f2937{% else %}#1f2937{% endif %}; */ /* Mantenido oscuro para ambos contextos */
+            padding: 24px;
+            color: #ffffff; /* Blanco */
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 24px;
+            color: #111827; /* Gris muy oscuro */
+        }
+        .content h2 {
+            color: #111827; /* Gris muy oscuro */
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-weight: 600;
+        }
+        .content p {
+            font-size: 16px;
+            color: #374151; /* Gris oscuro */
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .product-info-box {
+            background: #f3f4f6; /* Gris muy claro */
+            border-left: 4px solid #1f2937; /* Gris oscuro/negro */
+            /* {{ '#1f2937' if context == 'new_product' else '#1f2937' }}; */ /* Mantenido oscuro */
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            color: #111827; /* Gris muy oscuro */
+        }
+        .product-info-box strong {
+            color: #111827; /* Gris muy oscuro */
+        }
+        .cpe-tag {
+            background: #e5e7eb; /* Gris claro */
+            color: #1f2937; /* Gris oscuro/negro */
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 15px;
+        }
+        .alerts-summary-box {
+            padding: 18px;
+            background: #f3f4f6; /* Gris muy claro */
+            border-radius: 8px;
+            border: 1px solid #e5e7eb; /* Gris claro */
+            margin-bottom: 28px;
+            text-align: center;
+        }
+        .alert-count-new {
+            background: #dbeafe; /* Azul muy claro */
+            color: #1e40af; /* Azul oscuro */
+            border: 1px solid #bfdbfe; /* Azul claro */
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: bold;
+            font-size: 18px;
+            display: inline-block;
+            margin: 5px;
+        }
+        .alert-count-critical {
+            background: #fee2e2; /* Rojo muy claro */
+            color: #991b1b; /* Rojo oscuro */
+            border: 1px solid #fecaca; /* Rojo claro */
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: bold;
+            font-size: 18px;
+            display: inline-block;
+            margin: 5px;
+        }
+        .cve-details h3 {
+            color: #1f2937; /* Gris oscuro/negro */
+            font-size: 18px;
+            border-bottom: 2px solid #e5e7eb; /* Gris claro */
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .cve-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .cve-list-item {
+            background: #f9fafb; /* Gris muy claro */
+            margin-bottom: 10px;
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb; /* Gris claro */
+            font-weight: 500;
+            color: #991b1b; /* Rojo oscuro para CVEs */
+            font-family: monospace;
+            font-size: 15px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 32px 0 18px 0;
+        }
+        .button {
+            background-color: #1f2937; /* Gris oscuro/negro */
+            /* {% if context == 'new_product' %}#1f2937{% else %}#1f2937{% endif %}; */ /* Mantenido oscuro */
+            color: #ffffff !important; /* Blanco */
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #374151; /* Gris un poco más claro */
+        }
+        .footer {
+            padding: 20px 24px;
+            font-size: 13px;
+            color: #6b7280; /* Gris medio */
+            background: #f3f4f6; /* Gris muy claro */
+            border-top: 1px solid #e5e7eb; /* Gris claro */
+            text-align: center;
+        }
+        .footer p {
+            margin: 0 0 8px 0;
+            color: #6b7280; /* Gris medio */
+        }
+        .footer a {
+            color: #1d4ed8; /* Azul oscuro sutil */
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f9fafb; font-family: Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f9fafb">
+        <tr>
+            <td align="center">
+                <table class="email-container" width="700" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:700px;">
+                    <!-- Header -->
+                    <tr>
+                        <td class="header" bgcolor="{% if context == 'new_product' %}#1f2937{% else %}#1f2937{% endif %}">
+                            <h1 style="margin:0; font-size:24px; font-weight:600; color:#ffffff;">
+                                {% if context == 'new_product' %}
+                                    Producto y Alertas
+                                {% else %}
+                                    Nuevas Alertas Detectadas
+                                {% endif %}
+                            </h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td class="content">
+                            <h2 style="color:#111827; font-size:20px; margin-top:0; margin-bottom:18px; font-weight:600;">Hola, equipo de {{ org_name }},</h2>
+                            {% if context == 'new_product' %}
+                                <p style="font-size:16px; color:#374151; margin-bottom:12px; line-height: 1.6;">
+                                    Nos complace informarte que se ha añadido (o restaurado) el producto 
+                                    <span class="cpe-tag">{{ product_cpe }}</span> a vuestra monitorización en CVE-Sentinel.
+                                </p>
+                                <p style="font-size:16px; color:#374151; margin-bottom:18px; line-height: 1.6;">
+                                    Tras el análisis inicial, hemos identificado las siguientes vulnerabilidades (CVEs) asociadas:
+                                </p>
+                            {% elif context == 'cve_update' %}
+                                <p style="font-size:16px; color:#374151; margin-bottom:12px; line-height: 1.6;">
+                                    Hemos detectado nuevas alertas de seguridad para el producto 
+                                    <span class="cpe-tag">{{ product_cpe }}</span> que estáis monitorizando en CVE-Sentinel.
+                                </p>
+                                <p style="font-size:16px; color:#374151; margin-bottom:18px; line-height: 1.6;">
+                                    Estas alertas se deben a la publicación o actualización reciente de vulnerabilidades (CVEs):
+                                </p>
+                            {% endif %}
+
+                            <div class="product-info-box" style="border-left-color: {% if context == 'new_product' %}#1f2937{% else %}#1f2937{% endif %};">
+                                <strong style="color:#111827;">Organización:</strong> {{ org_name }}<br>
+                                <strong style="color:#111827;">Producto (CPE):</strong> <span class="cpe-tag">{{ product_cpe }}</span>
+                            </div>
+
+                            {% if new_alerts_count > 0 %}
+                                <div class="alerts-summary-box">
+                                    <div style="display:inline-block;" class="alert-count-new">
+                                        {{ new_alerts_count }} Alerta{{ 's' if new_alerts_count != 1 else '' }} Nueva{{ 's' if new_alerts_count != 1 else '' }}
+                                    </div>
+                                    <div style="display:inline-block;" class="alert-count-critical">
+                                        {{ critical_alerts_count }} Crítica{{ 's' if critical_alerts_count != 1 else '' }}
+                                    </div>
+                                </div>
+
+                                <div class="cve-details">
+                                    <h3 style="color:#1f2937; font-size:18px; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; font-weight:600;">Detalle de CVEs:</h3>
+                                    <ul class="cve-list">
+                                        {% for cve_id in new_alert_cves[:10] %}
+                                            <li class="cve-list-item">
+                                                {{ cve_id }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% if new_alert_cves|length > 10 %}
+                                        <p style="text-align:center; margin-top:12px; color:#6b7280; font-style:italic; font-size:14px;">
+                                            ... y {{ new_alert_cves|length - 10 }} más vulnerabilidades.
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="alerts-summary-box">
+                                    <span style="color:#374151; font-size:16px;">No se han encontrado nuevas vulnerabilidades (CVEs) para este producto en esta notificación.</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="button-container">
+                                <a href="{{ frontend_base_url }}/auth/organizations/{{ org_name_url_safe }}/alerts"
+                                   class="button" style="background-color:{% if context == 'new_product' %}#1f2937{% else %}#1f2937{% endif %};">
+                                    Ver Alertas de CVE-Sentinel
+                                </a>
+                            </div>
+
+                            <p style="font-size:15px; color:#374151; margin-bottom:10px; line-height: 1.6;">Te recomendamos revisar estas alertas y tomar las acciones necesarias.</p>
+                            <p style="font-size:15px; color:#374151; margin-bottom:10px; line-height: 1.6;">Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                            <p style="font-size:15px; color:#374151; margin-bottom:0; line-height: 1.6;">Saludos,<br><strong>El equipo de CVE-Sentinel</strong></p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer">
+                            <p style="margin:0 0 8px 0;">&copy; {{ now.year }} CVE-Sentinel. Todos los derechos reservados.</p>
+                            <p style="margin:0;">
+                                <a href="{{ frontend_base_url }}" style="color:#1d4ed8; text-decoration:none; font-weight:500;">Visita nuestra web</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{ frontend_base_url }}/auth/account/settings" style="color:#1d4ed8; text-decoration:none; font-weight:500;">Configuración de cuenta</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+  </body>
+</html>

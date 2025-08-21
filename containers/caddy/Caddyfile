@@ -1,0 +1,34 @@
+{
+
+}
+
+# Subdominio para la API, apunta al backend
+
+api.localtalent.es {
+    # Compresión
+    encode gzip zstd
+
+    # Proxy de la API
+    reverse_proxy backend:5000 {
+        header_up Host      {host}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Certificado autofirmado (Habra que autoconfiar)
+    tls internal
+}
+
+# Dominio principal, apunta al frontend
+localtalent.es {
+    
+    # Compresión
+    encode gzip zstd
+
+    # Manejo de SPA - todas las rutas van al frontend (nginx maneja el fallback)
+    reverse_proxy frontend:5173 {
+        header_up Host {host}
+    }
+
+    # Certificado autofirmado para desarrollo local
+    tls internal
+}

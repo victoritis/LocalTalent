@@ -1,0 +1,3 @@
+Dockerfile
+/application/.env
+/application/.env.local

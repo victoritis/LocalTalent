@@ -1,0 +1,83 @@
+services:
+  backend:
+    build:
+      context: ./containers/backend
+      target: production
+    env_file:
+      - ./containers/backend/application/.env.local
+    volumes:
+      - ./containers/backend/application/app/public:/application/app/public
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthcheck"] 
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 25s 
+
+  database:
+    build:
+      context: ./containers/database
+    volumes:
+      - ./volumes/database/data:/var/lib/postgresql/data
+    env_file:
+      - ./containers/database/.env.local
+
+
+  frontend:
+    build:
+      context: ./containers/frontend
+      target: production
+    env_file:
+      - ./containers/frontend/.env.local
+
+
+  redis:
+    build:
+      context: ./containers/redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+
+  celery-worker:
+    build:
+      context: ./containers
+      dockerfile: celery-worker/Dockerfile
+      target: production
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./containers/backend/application/.env.local
+
+  celery-beat:
+    build:
+      context: ./containers
+      dockerfile: celery-beat/Dockerfile
+      target: production
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./containers/backend/application/.env.local
+
+  caddy:
+    build:
+      context: ./containers/caddy
+      target: production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./volumes/caddy/data:/data
+      - ./volumes/caddy/config:/config
+    networks:
+      - backend
+      - frontend
+
+

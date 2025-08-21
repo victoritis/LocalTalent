@@ -1,0 +1,72 @@
+name: cve-sentinel
+
+services:
+  backend:
+    restart: unless-stopped
+    networks:
+      - backend
+      - database
+      - redis
+    depends_on:
+      - database
+        # condition: service_healthy
+
+  database:
+    restart: unless-stopped
+    networks:
+      - database
+
+  frontend:
+    restart: unless-stopped
+    networks:
+      - frontend
+
+  redis:
+    restart: unless-stopped
+    networks:
+      - redis
+      - mailpit
+
+  celery-worker:
+    restart: unless-stopped
+    networks:
+      - redis
+      - database
+      - mailpit
+
+  celery-beat:
+    restart: unless-stopped
+    networks:
+      - redis
+      - database
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit
+    networks:
+      - mailpit
+    ports:
+      - 1025:1025
+      - 8025:8025
+
+  caddy:
+    build:
+      context: ./containers/caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./containers/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./volumes/caddy/data:/data
+      - ./volumes/caddy/config:/config
+    networks:
+      - backend
+      - frontend
+
+
+networks:
+  backend:
+  database:
+  frontend:
+  redis:
+  mailpit:

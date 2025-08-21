@@ -1,0 +1,17 @@
+Hola,
+
+Se ha añadido un nuevo producto a la organización '{{ org_name }}' y se han detectado nuevas alertas de seguridad asociadas:
+
+Producto añadido: {{ product_cpe }}
+
+Nuevas alertas de CVE detectadas ({{ new_alerts_count }}):
+{% for cve_id in new_alert_cves %}
+- {{ cve_id }}
+{% else %}
+No se encontraron nuevas alertas específicas en esta actualización (esto podría indicar una reactivación).
+{% endfor %}
+
+Puedes revisar los detalles en la plataforma.
+
+Saludos,
+El equipo de CVE-Sentinel

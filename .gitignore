@@ -1,0 +1,5 @@
+# Exclude the documentos folder
+__documentos/
+__basura/
+__diagramans/
+__apikey/
