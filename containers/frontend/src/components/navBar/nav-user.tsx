@@ -1,11 +1,6 @@
 "use client";
 
-import { 
-  ChevronsUpDown,
-  LogOut,
-  User, 
-  Building,
-} from "lucide-react";
+import { ChevronsUpDown, LogOut, User } from "lucide-react";
 
 import {
   Avatar,
@@ -47,10 +42,6 @@ export function NavUser({
 
   const handleProfileRedirect = () => {
     router.navigate({ to: "/auth/user/profile" }); 
-  };
-
-  const handleOrganizationsRedirect = () => {
-    router.navigate({ to: "/auth/organizations/my-organizations" });
   };
 
   return (
@@ -100,10 +91,6 @@ export function NavUser({
               <DropdownMenuItem onClick={handleProfileRedirect}>
                 <User className="mr-2 h-4 w-4" /> 
                 <span>Perfil</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleOrganizationsRedirect}>
-                <Building className="mr-2 h-4 w-4" /> 
-                <span>Organizaciones</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

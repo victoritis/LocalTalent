@@ -5,12 +5,19 @@ from app.user import bp
 from app import db
 from app.logger_config import logger
 from flask import current_app
-from app.models import Organization, OrgUser, Alert, User # Asegúrate que User esté importado
-from app import login # Asegúrate que login manager esté importado
+from app.models import Organization, OrgUser, User  # Asegúrate que User esté importado
 from werkzeug.utils import secure_filename
 import os
-import json
-from app.organization.services import my_organizations
+
+
+def _get_user_organizations():
+    orgs = (
+        db.session.query(Organization.id, Organization.name)
+        .join(OrgUser, OrgUser.organization_id == Organization.id)
+        .filter(OrgUser.user_id == current_user.id)
+        .all()
+    )
+    return [{"id": org_id, "name": name} for org_id, name in orgs]
 
 #Para la pagina de la vista del perfil
 @bp.route('/api/v1/user/profile-info', methods=['GET'])
@@ -18,8 +25,7 @@ from app.organization.services import my_organizations
 def profile_info():
     """
     - Devuelve la información del usuario autenticado.
-    - Incluye datos personales, organizaciones y las últimas 50 alertas.
-    - Si el usuario es SUPERADMIN, incluye todas las organizaciones.
+    - Incluye datos personales y organizaciones asociadas.
     - Requiere que el usuario esté autenticado.
     - Retorna un objeto con toda la información del perfil.
     """
@@ -30,54 +36,11 @@ def profile_info():
         if not user:
             return jsonify({'error': 'No user is currently logged in'}), 401
 
-        # Obtener organizaciones del usuario usando my_organizations
-        organizations_data = []
-        try:
-            logger.getChild('user').debug("Obteniendo organizaciones mediante my_organizations")
-            # my_organizations devuelve un tuple (data, status_code)
-            orgs_response, status_code = my_organizations()
-            
-            if status_code == 200:
-                # Extraer solo el campo "organizations" del diccionario de respuesta
-                organizations_data = orgs_response.get("organizations", [])
-                logger.getChild('user').debug(f"Obtenidas {len(organizations_data)} organizaciones")
-            else:
-                logger.getChild('user').error(f"Error al llamar a my_organizations: status {status_code}")
-                # Continuamos con organizations_data vacío
-        except Exception as e:
-            logger.getChild('user').error(f"Error al obtener organizaciones: {str(e)}", exc_info=True)
-            # No retornamos error, continuamos con una lista vacía
+        # Obtener organizaciones del usuario
+        organizations_data = _get_user_organizations()
 
-        # Obtener las últimas 50 alertas de las organizaciones a las que pertenece el usuario
+        # Alertas ya no se gestionan
         alerts_data = []
-        try:
-            logger.getChild('user').debug("Iniciando obtención de alertas activas usando IDs de organizaciones")
-            if organizations_data:
-                org_ids = [org["id"] for org in organizations_data]  # Extraer los IDs
-                alerts_query = Alert.query.filter(
-                    Alert.org.in_(org_ids),
-                    Alert.active == True
-                ).order_by(
-                    Alert.createdAt.desc()  # Ordenar de forma descendente por fecha de creación
-                ).limit(50).all()
-            else:
-                alerts_query = []
-            # Construir un diccionario para mapear ID de organización a su nombre
-            org_lookup = {org["id"]: org["name"] for org in organizations_data}
-            alerts_data = [
-                {
-                    "org_name": org_lookup.get(alert.org, "Unknown"),
-                    "created_at": alert.createdAt,
-                    "cpe": alert.cpe,
-                    "cve": alert.cve,
-                    "is_active": alert.active,
-                    "cvss_score": alert.cve_info.cvss_score if alert.cve_info else None,
-                    "cvss_version": alert.cve_info.cvss_version if alert.cve_info else None
-                } for alert in alerts_query
-            ]
-            logger.getChild('user').debug(f"Obtenidas {len(alerts_data)} alertas")
-        except Exception as e:
-            logger.getChild('user').error(f"Error al obtener alertas: {str(e)}", exc_info=True)
 
         # Procesar imagen de perfil
         image_data = None
@@ -120,6 +83,20 @@ def profile_info():
     except Exception as e:
         logger.getChild('user').error(f"Error crítico en profile_info: {str(e)}", exc_info=True)
         return jsonify({"error": "Error interno del servidor al procesar el perfil"}), 500
+
+
+@bp.route('/api/v1/user/organizations', methods=['GET'])
+@login_required
+def get_user_organizations():
+    """Devuelve las organizaciones a las que pertenece el usuario actual."""
+    try:
+        organizations = _get_user_organizations()
+        return jsonify({"organizations": organizations}), 200
+    except Exception as e:
+        logger.getChild('user').error(
+            f"Error al obtener organizaciones de usuario: {str(e)}", exc_info=True
+        )
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 @bp.route('/api/v1/user/sidebar-info', methods=['GET'])
 @login_required

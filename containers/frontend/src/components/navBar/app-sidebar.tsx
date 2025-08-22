@@ -1,15 +1,5 @@
 import * as React from "react";
-import {
-  Frame,
-  LifeBuoy,
-  Send,
-  SquareTerminal,
-  PackageSearch, 
-  ShieldAlert,
-  ListFilter, 
-  Settings,
-} from "lucide-react";
-import { useAuth } from "@/auth";
+import { Frame, LifeBuoy, Send } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { NavMain } from "@/components/navBar/nav-main";
 import { NavProjects } from "@/components/navBar/nav-projects";
@@ -76,44 +66,7 @@ const initialUserData: UserData = {
 
 const staticData: StaticData = {
   user: initialUserData, // Usar los datos iniciales
-  navMain: [
-    {
-      title: "Organizaciones",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: false, 
-      items: [] 
-    },
-    {
-      title: "Panel Superadmin",
-      url: "#", 
-      icon: Settings, 
-      isActive: false, 
-      items: [],
-    },
-    
-    {
-      title: "Explorador CPE",
-      url: "/auth/glossary/cpe-explorer", 
-      icon: PackageSearch, 
-      isActive: false, 
-      items: [], 
-    },
-    {
-      title: "Explorador CVE",
-      url: "/auth/glossary/cve-explorer",
-      icon: ShieldAlert, 
-      isActive: false,
-      items: [],
-    },
-    { 
-      title: "Explorador de Match",
-      url: "/auth/glossary/match-explorer",
-      icon: ListFilter, 
-      isActive: false,
-      items: [],
-    }
-  ],
+  navMain: [],
   navSecondary: [
     { title: "Support", url: "/auth/support", icon: LifeBuoy },
     { title: "Feedback", url: "/auth/feedback", icon: Send }
@@ -124,9 +77,8 @@ const staticData: StaticData = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { roles } = useAuth();
   const router = useRouter();
-  const [navMain, setNavMain] = React.useState<NavItem[]>(staticData.navMain);
+  const [navMain] = React.useState<NavItem[]>(staticData.navMain);
   const [navSecondary, setNavSecondary] = React.useState(staticData.navSecondary);
   const [currentUserData, setCurrentUserData] = React.useState<UserData>(initialUserData);
   const apiUrl = import.meta.env.VITE_REACT_APP_API_URL || "";
@@ -159,109 +111,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     fetchUserData();
   }, [apiUrl]);
 
-  const getOrganizationItems = React.useCallback((
-    currentRoles: typeof roles
-  ): Array<{ title: string; url: string; onClick?: () => void }> => {
-    const baseItems = [];
-    
-    if (currentRoles.ROLE_SUPERADMIN) {
-      baseItems.push({
-        title: "Administrar organizaciones",
-        url: "/auth/superadmin/manage-organizations",
-        onClick: () => router.navigate({ to: "/auth/superadmin/manage-organizations" })
-      });
-      baseItems.push({
-        title: "Crear organización",
-        url: "/auth/superadmin/create-organization",
-        onClick: () => router.navigate({ to: "/auth/superadmin/create-organization" }),
-      });
-    }
-
-    if (currentRoles.ROLE_ORG_ADMIN) {
-      baseItems.push({
-        title: "Administrar organizaciones",
-        url: "/auth/org-admin/manage-organizations",
-        onClick: () => router.navigate({ to: "/auth/org-admin/manage-organizations" })
-      });
-    }
-
-    baseItems.push({
-      title: currentRoles.ROLE_SUPERADMIN ? "Organizaciones" : "Mis organizaciones",
-      url: "/auth/organizations/my-organizations",
-      onClick: () => router.navigate({ to: "/auth/organizations/my-organizations" })
-    });
-
-    return baseItems;
-  }, [router]);
-
   React.useEffect(() => {
-    const updatedNavMain = staticData.navMain.map(item => {
-      if (item.title === "Organizaciones") {
-        return {
-          ...item,
-          items: getOrganizationItems(roles)
-        };
-      }
-      if (item.title === "Panel Superadmin") {
-        const superAdminItems = [];
-        if (roles.ROLE_SUPERADMIN) {
-          superAdminItems.push({
-            title: "Resumen del Sistema", 
-            url: "/auth/superadmin/data-status", 
-            onClick: () => router.navigate({ to: "/auth/superadmin/data-status" }),
-          });
-          superAdminItems.push({ 
-            title: "Sincronización de Datos",
-            url: "/auth/superadmin/data-synchronization",
-            onClick: () => router.navigate({ to: "/auth/superadmin/data-synchronization" }),
-          });
-          superAdminItems.push({
-            title: "Consultar Feedback",
-            url: "/auth/superadmin/view-feedback",
-            onClick: () => router.navigate({ to: "/auth/superadmin/view-feedback" }),
-          });
-
-        }
-        return {
-          ...item,
-          items: superAdminItems,
-          isActive: roles.ROLE_SUPERADMIN,
-          hidden: superAdminItems.length === 0,
-        };
-      }
-      
-      if (item.title === "Explorador CPE") {
-        return {
-          ...item,
-          isActive: router.state.location.pathname.startsWith("/auth/glossary/cpe-explorer"), 
-          
-        };
-      }
-      if (item.title === "Explorador CVE") {
-        return {
-          ...item,
-          isActive: router.state.location.pathname.startsWith("/auth/glossary/cve-explorer"),
-        };
-      }
-
-      if (item.title === "Explorador de Match") {
-        return {
-          ...item,
-          isActive: router.state.location.pathname.startsWith("/auth/glossary/match-explorer"),
-        };
-      }
-      return item;
-    });
-    setNavMain(updatedNavMain.filter(item => !item.hidden)); // Filtrar items ocultos
-
+    // Highlight secondary navigation based on current path
     const currentPath = router.state.location.pathname;
     const updatedNavSecondary = staticData.navSecondary.map(item => ({
       ...item,
       isActive: item.url !== "#" && currentPath.startsWith(item.url)
     }));
+     
     setNavSecondary(updatedNavSecondary);
-
-  }, [roles, getOrganizationItems, router.state.location.pathname]); 
+  }, [router.state.location.pathname]);
 
   return (
     <Sidebar variant="inset" {...props}>

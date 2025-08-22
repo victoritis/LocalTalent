@@ -61,27 +61,12 @@ def create_app(config_class=Config):
     
     from app.user import bp as user_bp
     app.register_blueprint(user_bp)
-    
-    from app.admin import bp as admin_bp
-    app.register_blueprint(admin_bp)
 
-    from app.rol import bp as rol_bp
-    app.register_blueprint(rol_bp)
-
-    from app.organization import bp as organization_bp
-    app.register_blueprint(organization_bp)
-    
     from app.error import bp as error_bp
     app.register_blueprint(error_bp)
-    
-    from app.products import bp as products_bp
-    app.register_blueprint(products_bp)
-    
-    from app.alerts import bp as alerts_bp
-    app.register_blueprint(alerts_bp)
     
     logger.getChild('main').info('Application startup')
 
     return app
 
-from app import models, tasks
+from app import models
