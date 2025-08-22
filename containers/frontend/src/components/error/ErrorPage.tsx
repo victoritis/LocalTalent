@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ShieldBan, RotateCw, Home, Lock } from "lucide-react";
@@ -50,8 +50,13 @@ const ErrorPage = ({ errorMessage, errorCode, retry }: ErrorPageProps) => {
     }
   };
 
+  // Evitar múltiples POST del mismo mensaje (re-renders, montajes repetidos)
+  const lastLoggedRef = useRef<string | null>(null);
   useEffect(() => {
-    logErrorToBackend();
+    if (errorMessage && lastLoggedRef.current !== errorMessage) {
+      lastLoggedRef.current = errorMessage;
+      logErrorToBackend();
+    }
   }, [errorMessage]);
 
   return (

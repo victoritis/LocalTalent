@@ -31,7 +31,9 @@ const LoginRecoverPasswordLazyImport = createFileRoute(
   '/login/recover-password',
 )()
 const AuthSupportLazyImport = createFileRoute('/auth/support')()
+const AuthHomeLazyImport = createFileRoute('/auth/home')()
 const AuthFeedbackLazyImport = createFileRoute('/auth/feedback')()
+const AuthFavoritesLazyImport = createFileRoute('/auth/favorites')()
 const AuthUserIndexLazyImport = createFileRoute('/auth/user/')()
 
 // Create/Update Routes
@@ -90,11 +92,25 @@ const AuthSupportLazyRoute = AuthSupportLazyImport.update({
   getParentRoute: () => AuthRoute,
 } as any).lazy(() => import('./routes/auth/support.lazy').then((d) => d.Route))
 
+const AuthHomeLazyRoute = AuthHomeLazyImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthRoute,
+} as any).lazy(() => import('./routes/auth/home.lazy').then((d) => d.Route))
+
 const AuthFeedbackLazyRoute = AuthFeedbackLazyImport.update({
   id: '/feedback',
   path: '/feedback',
   getParentRoute: () => AuthRoute,
 } as any).lazy(() => import('./routes/auth/feedback.lazy').then((d) => d.Route))
+
+const AuthFavoritesLazyRoute = AuthFavoritesLazyImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AuthRoute,
+} as any).lazy(() =>
+  import('./routes/auth/favorites.lazy').then((d) => d.Route),
+)
 
 const AuthUserRoute = AuthUserImport.update({
   id: '/user',
@@ -154,11 +170,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthUserImport
       parentRoute: typeof AuthImport
     }
+    '/auth/favorites': {
+      id: '/auth/favorites'
+      path: '/favorites'
+      fullPath: '/auth/favorites'
+      preLoaderRoute: typeof AuthFavoritesLazyImport
+      parentRoute: typeof AuthImport
+    }
     '/auth/feedback': {
       id: '/auth/feedback'
       path: '/feedback'
       fullPath: '/auth/feedback'
       preLoaderRoute: typeof AuthFeedbackLazyImport
+      parentRoute: typeof AuthImport
+    }
+    '/auth/home': {
+      id: '/auth/home'
+      path: '/home'
+      fullPath: '/auth/home'
+      preLoaderRoute: typeof AuthHomeLazyImport
       parentRoute: typeof AuthImport
     }
     '/auth/support': {
@@ -238,14 +268,18 @@ const AuthUserRouteWithChildren = AuthUserRoute._addFileChildren(
 
 interface AuthRouteChildren {
   AuthUserRoute: typeof AuthUserRouteWithChildren
+  AuthFavoritesLazyRoute: typeof AuthFavoritesLazyRoute
   AuthFeedbackLazyRoute: typeof AuthFeedbackLazyRoute
+  AuthHomeLazyRoute: typeof AuthHomeLazyRoute
   AuthSupportLazyRoute: typeof AuthSupportLazyRoute
   AuthSuperadminDashboardRoute: typeof AuthSuperadminDashboardRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthUserRoute: AuthUserRouteWithChildren,
+  AuthFavoritesLazyRoute: AuthFavoritesLazyRoute,
   AuthFeedbackLazyRoute: AuthFeedbackLazyRoute,
+  AuthHomeLazyRoute: AuthHomeLazyRoute,
   AuthSupportLazyRoute: AuthSupportLazyRoute,
   AuthSuperadminDashboardRoute: AuthSuperadminDashboardRoute,
 }
@@ -271,7 +305,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
   '/auth/user': typeof AuthUserRouteWithChildren
+  '/auth/favorites': typeof AuthFavoritesLazyRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
+  '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
@@ -285,7 +321,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
+  '/auth/favorites': typeof AuthFavoritesLazyRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
+  '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
@@ -302,7 +340,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
   '/auth/user': typeof AuthUserRouteWithChildren
+  '/auth/favorites': typeof AuthFavoritesLazyRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
+  '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
@@ -320,7 +360,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/login'
     | '/auth/user'
+    | '/auth/favorites'
     | '/auth/feedback'
+    | '/auth/home'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
@@ -333,7 +375,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/auth/favorites'
     | '/auth/feedback'
+    | '/auth/home'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
@@ -348,7 +392,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/login'
     | '/auth/user'
+    | '/auth/favorites'
     | '/auth/feedback'
+    | '/auth/home'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
@@ -397,7 +443,9 @@ export const routeTree = rootRoute
       "filePath": "auth.tsx",
       "children": [
         "/auth/user",
+        "/auth/favorites",
         "/auth/feedback",
+        "/auth/home",
         "/auth/support",
         "/auth/superadmin/dashboard"
       ]
@@ -418,8 +466,16 @@ export const routeTree = rootRoute
         "/auth/user/"
       ]
     },
+    "/auth/favorites": {
+      "filePath": "auth/favorites.lazy.tsx",
+      "parent": "/auth"
+    },
     "/auth/feedback": {
       "filePath": "auth/feedback.lazy.tsx",
+      "parent": "/auth"
+    },
+    "/auth/home": {
+      "filePath": "auth/home.lazy.tsx",
       "parent": "/auth"
     },
     "/auth/support": {

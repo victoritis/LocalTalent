@@ -16,39 +16,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-
-            <Breadcrumb key={location.pathname}>
-              <BreadcrumbList>
-                {segments.map((segment, index) => (
-                  <React.Fragment key={index}>
-                    {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
-                    <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink
-                      >
-                        {formatSegment(segment)}
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {index === segments.length - 1 && (
-                      <BreadcrumbPage className="md:hidden">
-                        {formatSegment(segment)}
-                      </BreadcrumbPage>
-                    )}
-                  </React.Fragment>
-                ))}
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2">
+            <div className="flex items-center gap-2 px-4 flex-1">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb key={location.pathname} className="flex-1">
+                <BreadcrumbList>
+                  {segments.map((segment, index) => (
+                    <React.Fragment key={index}>
+                      {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
+                      <BreadcrumbItem className="hidden md:block">
+                        <BreadcrumbLink>{formatSegment(segment)}</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      {index === segments.length - 1 && (
+                        <BreadcrumbPage className="md:hidden">{formatSegment(segment)}</BreadcrumbPage>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+          </header>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+    </SidebarInset>
+  </SidebarProvider>
   );
 }

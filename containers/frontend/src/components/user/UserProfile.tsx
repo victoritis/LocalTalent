@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Music, Heart, Play, Pause, Calendar, MapPin, Star, Mic2, MoreHorizontal } from "lucide-react";
 import * as React from "react";
+import { useAuth } from '@/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
@@ -187,6 +188,11 @@ export function UserProfile({
               <Badge variant="secondary" className="flex items-center gap-1 rounded-full px-3 py-1 text-xs">
                 <Mic2 className="h-3 w-3" /> Talento local
               </Badge>
+              {/* Ciudad seleccionada */}
+              {(() => { const { city } = useAuth(); return city ? (
+                <Badge variant="outline" className="flex items-center gap-1 rounded-full px-3 py-1 text-xs">
+                  <MapPin className="h-3 w-3" /> {city}
+                </Badge>) : null })()}
             </div>
             <p className="text-sm md:text-base text-muted-foreground">{user.email}</p>
             <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm text-muted-foreground">

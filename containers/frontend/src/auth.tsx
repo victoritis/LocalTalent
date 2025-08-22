@@ -1,7 +1,6 @@
 import * as React from "react";
 import { checkIfLoggedIn, loginUser, logoutUser } from "@/services/login/authService.lazy.tsx";
 import { checkAllRoles } from "@/services/rol/rol";
-import { OrganizationContext } from "./services/organizations/organizationApi";
 import { useEffect } from "react";
 import LoadingPage from "@/components/loading/LoadingPage";
 import { useRouter } from "@tanstack/react-router";
@@ -9,22 +8,19 @@ import { useRouter } from "@tanstack/react-router";
 export interface AuthContextInterface {
   isAuthenticated: () => Promise<boolean | "" | null>;
   user: string | null;
-  current_organization: OrganizationContext | null;
   login: (username: string, password: string, otpCode: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  city: string | null;
+  setCity: (c: string | null) => void;
+  detectCity: () => void;
   roles: {
     ROLE_SUPERADMIN: boolean;
     ROLE_ORG_ADMIN: boolean;
     ROLE_USER: boolean;
   };
-  getRoles: () => Promise<{
-    ROLE_SUPERADMIN: boolean;
-    ROLE_ORG_ADMIN: boolean;
-    ROLE_USER: boolean;
-  }>;
+  getRoles: () => Promise<{ ROLE_SUPERADMIN: boolean; ROLE_ORG_ADMIN: boolean; ROLE_USER: boolean; }>;
   setRoles: () => Promise<void>;
-  set_current_organization: (organization: OrganizationContext | null) => void;
-  rolesLoaded: boolean; // Propiedad añadida
+  rolesLoaded: boolean;
 }
 
 const AuthContext = React.createContext<AuthContextInterface | null>(null);
@@ -32,17 +28,38 @@ const AuthContext = React.createContext<AuthContextInterface | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = React.useState<string | null>(null);
-  const [current_organization, setCurrentOrganization] = React.useState<OrganizationContext | null>(null);
   const [roles, setInternalRoles] = React.useState({
     ROLE_SUPERADMIN: false,
     ROLE_ORG_ADMIN: false,
     ROLE_USER: false,
   });
   const [rolesLoaded, setRolesLoaded] = React.useState(false);
+  const [city, setCityState] = React.useState<string | null>(null);
 
-  const set_current_organization = React.useCallback((organization: OrganizationContext | null) => {
-    setCurrentOrganization(organization);
+  // Persistencia local de ciudad
+  React.useEffect(() => {
+    const stored = localStorage.getItem('locTalent.currentCity');
+    if (stored) setCityState(stored);
   }, []);
+
+  const setCity = React.useCallback((c: string | null) => {
+    setCityState(c);
+    if (c) localStorage.setItem('locTalent.currentCity', c); else localStorage.removeItem('locTalent.currentCity');
+  }, []);
+
+  const detectCity = React.useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      // Heurística simple igual que antes
+      let detected = 'Madrid';
+      if (lat < 40 && lon < -0.3) detected = 'Sevilla';
+      if (lat > 41.2 && lon < 2.3) detected = 'Barcelona';
+      setCity(detected);
+    });
+  }, [setCity]);
+
+  // Eliminado manejo de organizaciones
 
   const isAuthenticated = async (): Promise<boolean | "" | null> => {
     return await verifyLogin();
@@ -66,11 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async (): Promise<void> => {
     const result = await logoutUser();
-    const loginUrl = `${import.meta.env.VITE_REACT_FRONTEND_API_URL}/login`;
+  const loginUrl = `/login`;
     window.location.href = loginUrl;
     if (result.success) {
       setUser(null);
-      setCurrentOrganization(null);
+  // org cleanup eliminado
       router.navigate({ to: "/login" });
     }
   };
@@ -103,13 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       isAuthenticated,
       user,
-      current_organization,
       login,
       logout,
+      city,
+      setCity,
+      detectCity,
       roles,
       getRoles,
       setRoles,
-      set_current_organization,
       rolesLoaded // Propiedad añadida al proveedor de contexto
     }}>
       {children}

@@ -10,7 +10,7 @@ export default function Index() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate({ to: "/auth/user/profile", replace: true });
+    navigate({ to: "/auth/home", replace: true });
   }, [navigate]);
 
   return null;
