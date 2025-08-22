@@ -60,21 +60,10 @@ class Config:
 
     #Deberia ir task_queues pero parece no funcionar
     #Declaracion de colas
-    task_queues = (
-        Queue('jwtoken', routing_key='jwtoken.#'),
-        Queue('cve_load', routing_key='cve_load.#'),
-        Queue('cpe_load', routing_key='cpe_load.#'),
-        Queue('match_load', routing_key='match_load.#'),
-
-    )
+    task_queues = ()
     #Deberia ir task_route en vez de CELERY_ROUTES pero parece no funcionar
-    #Para indicar en tareas periodicas a que cola ir
-    CELERY_ROUTES = {
-        'app.tasks.tokens.remove_expired_tokens': {'queue': 'jwtoken'},
-        'app.tasks.cve.cve_incremental_update': {'queue': 'cve_load'},
-        'app.tasks.cpe.cpe_incremental_update': {'queue': 'cpe_load'},
-        'app.tasks.match.match_incremental_update': {'queue': 'match_load'},
-    }      
+    #Para indicar en tareas periódicas a qué cola ir
+    CELERY_ROUTES = {}
     
     ############################################################################################################
     # Configuración de API NVD
