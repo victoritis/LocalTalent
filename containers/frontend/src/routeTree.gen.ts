@@ -18,6 +18,7 @@ import { Route as AuthImport } from './routes/auth'
 import { Route as LoginIndexRouteImport } from './routes/login/index.route'
 import { Route as AuthUserImport } from './routes/auth/user'
 import { Route as AuthUserProfileImport } from './routes/auth/user/profile'
+import { Route as AuthSuperadminDashboardImport } from './routes/auth/superadmin/dashboard'
 
 // Create Virtual Routes
 
@@ -115,6 +116,12 @@ const AuthUserProfileRoute = AuthUserProfileImport.update({
   getParentRoute: () => AuthUserRoute,
 } as any)
 
+const AuthSuperadminDashboardRoute = AuthSuperadminDashboardImport.update({
+  id: '/superadmin/dashboard',
+  path: '/superadmin/dashboard',
+  getParentRoute: () => AuthRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -189,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof LoginImport
     }
+    '/auth/superadmin/dashboard': {
+      id: '/auth/superadmin/dashboard'
+      path: '/superadmin/dashboard'
+      fullPath: '/auth/superadmin/dashboard'
+      preLoaderRoute: typeof AuthSuperadminDashboardImport
+      parentRoute: typeof AuthImport
+    }
     '/auth/user/profile': {
       id: '/auth/user/profile'
       path: '/profile'
@@ -226,12 +240,14 @@ interface AuthRouteChildren {
   AuthUserRoute: typeof AuthUserRouteWithChildren
   AuthFeedbackLazyRoute: typeof AuthFeedbackLazyRoute
   AuthSupportLazyRoute: typeof AuthSupportLazyRoute
+  AuthSuperadminDashboardRoute: typeof AuthSuperadminDashboardRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthUserRoute: AuthUserRouteWithChildren,
   AuthFeedbackLazyRoute: AuthFeedbackLazyRoute,
   AuthSupportLazyRoute: AuthSupportLazyRoute,
+  AuthSuperadminDashboardRoute: AuthSuperadminDashboardRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -261,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
+  '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
   '/auth/user/profile': typeof AuthUserProfileRoute
   '/auth/user/': typeof AuthUserIndexLazyRoute
 }
@@ -274,6 +291,7 @@ export interface FileRoutesByTo {
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login': typeof LoginIndexRouteRoute
+  '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
   '/auth/user/profile': typeof AuthUserProfileRoute
   '/auth/user': typeof AuthUserIndexLazyRoute
 }
@@ -290,6 +308,7 @@ export interface FileRoutesById {
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
+  '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
   '/auth/user/profile': typeof AuthUserProfileRoute
   '/auth/user/': typeof AuthUserIndexLazyRoute
 }
@@ -307,6 +326,7 @@ export interface FileRouteTypes {
     | '/login/reset-password'
     | '/register/create-account'
     | '/login/'
+    | '/auth/superadmin/dashboard'
     | '/auth/user/profile'
     | '/auth/user/'
   fileRoutesByTo: FileRoutesByTo
@@ -319,6 +339,7 @@ export interface FileRouteTypes {
     | '/login/reset-password'
     | '/register/create-account'
     | '/login'
+    | '/auth/superadmin/dashboard'
     | '/auth/user/profile'
     | '/auth/user'
   id:
@@ -333,6 +354,7 @@ export interface FileRouteTypes {
     | '/login/reset-password'
     | '/register/create-account'
     | '/login/'
+    | '/auth/superadmin/dashboard'
     | '/auth/user/profile'
     | '/auth/user/'
   fileRoutesById: FileRoutesById
@@ -376,7 +398,8 @@ export const routeTree = rootRoute
       "children": [
         "/auth/user",
         "/auth/feedback",
-        "/auth/support"
+        "/auth/support",
+        "/auth/superadmin/dashboard"
       ]
     },
     "/login": {
@@ -417,6 +440,10 @@ export const routeTree = rootRoute
     "/login/": {
       "filePath": "login/index.route.tsx",
       "parent": "/login"
+    },
+    "/auth/superadmin/dashboard": {
+      "filePath": "auth/superadmin/dashboard.tsx",
+      "parent": "/auth"
     },
     "/auth/user/profile": {
       "filePath": "auth/user/profile.tsx",

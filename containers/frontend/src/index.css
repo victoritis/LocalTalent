@@ -107,7 +107,7 @@
 }
 
 
-/* Propuesto para añadir en tu archivo CSS global, ej: /root/CVE-Sentinel/cve-sentinel/containers/frontend/src/index.css */
+/* CSS global principal del frontend LocalTalent */
 .badge-active-shimmer {
   position: relative;
   overflow: hidden; /* Para contener el pseudo-elemento de la animación */

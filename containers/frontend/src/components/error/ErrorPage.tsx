@@ -91,7 +91,7 @@ const ErrorPage = ({ errorMessage, errorCode, retry }: ErrorPageProps) => {
         <div className="space-y-2 text-sm text-muted-foreground px-4">
           <p>Contacto de soporte:</p>
           <a
-            href="mailto:soporte@cve-sentinel.csa.es"
+            href="mailto:soporte@localtalent.es"
             className="text-primary hover:underline font-medium"
           >
             soporte@cvesentinel.csa.es          </a>

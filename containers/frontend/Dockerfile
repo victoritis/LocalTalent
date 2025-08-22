@@ -6,9 +6,9 @@ WORKDIR /app
 
 FROM common AS development
 
-COPY . .
+# COPY . .
 
-RUN npm install
+# RUN npm install
 
 EXPOSE 5173
 

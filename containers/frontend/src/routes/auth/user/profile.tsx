@@ -20,12 +20,7 @@ type UserDataFromApi = {
   last_name: string;
   special_roles?: string[];
   is_enabled?: boolean;
-  organizations: {
-    id: number;
-    name: string;
-    logo_data?: string;
-    roles_in_org: string;
-  }[];
+  organizations?: never; // eliminado en backend
   profile_image?: string;
   alerts: LocalAlert[]; 
 };
@@ -63,7 +58,7 @@ function ProfilePage() {
     isEnabled: false,
   });
 
-  const [organizations, setOrganizations] = React.useState<LocalOrganization[]>([]);
+  // Organizaciones eliminadas
   const [alerts, setAlerts] = React.useState<LocalAlert[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -98,17 +93,7 @@ function ProfilePage() {
           specialRoles: data.special_roles ?? [],
           isEnabled: data.is_enabled ?? false,
         });
-        setOrganizations(
-          data.organizations.map((org) => ({
-            id: org.id,
-            name: org.name,
-            description: "Descripción proximamente",
-            image: org.logo_data
-              ? `data:image/png;base64,${org.logo_data}`
-              : "https://via.placeholder.com/100",
-            role: org.roles_in_org || "User",
-          }))
-        );
+  // organizaciones removidas
         setAlerts(data.alerts ?? []);
       })
       .catch((err) => {
@@ -166,7 +151,7 @@ function ProfilePage() {
   <div className="p-4 md:p-8">
       <UserProfile
         user={user}
-        organizations={organizations}
+        organizations={[]}
         alerts={alerts} 
         onUpdateUser={handleUpdateUser}
         onUpdatePassword={handleUpdatePassword}

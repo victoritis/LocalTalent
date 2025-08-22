@@ -129,9 +129,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <img src="/images/cve-sentinel2.png" alt="Icono CVE-SENTINEL" className="size-8 object-contain" />
+                <img src="/images/cve-sentinel2.png" alt="Logo LocalTalent" className="size-8 object-contain" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">CVE-SENTINEL</span>
+                  <span className="truncate font-semibold">LocalTalent</span>
                   <span className="truncate text-xs">CSA Pro Edition</span>
                 </div>
               </a>

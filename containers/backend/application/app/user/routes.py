@@ -5,19 +5,12 @@ from app.user import bp
 from app import db
 from app.logger_config import logger
 from flask import current_app
-from app.models import Organization, OrgUser, User  # Asegúrate que User esté importado
+from app.models import User  # Organización eliminada
 from werkzeug.utils import secure_filename
 import os
 
 
-def _get_user_organizations():
-    orgs = (
-        db.session.query(Organization.id, Organization.name)
-        .join(OrgUser, OrgUser.organization_id == Organization.id)
-        .filter(OrgUser.user_id == current_user.id)
-        .all()
-    )
-    return [{"id": org_id, "name": name} for org_id, name in orgs]
+## Función eliminada: _get_user_organizations (organizaciones removidas)
 
 #Para la pagina de la vista del perfil
 @bp.route('/api/v1/user/profile-info', methods=['GET'])
@@ -35,9 +28,6 @@ def profile_info():
         user = current_user
         if not user:
             return jsonify({'error': 'No user is currently logged in'}), 401
-
-        # Obtener organizaciones del usuario
-        organizations_data = _get_user_organizations()
 
         # Alertas ya no se gestionan
         alerts_data = []
@@ -72,7 +62,7 @@ def profile_info():
             "last_name": user.last_name,
             "special_roles": user.special_roles,
             "is_enabled": user.is_enabled,
-            "organizations": organizations_data,
+            # "organizations" removido
             "profile_image": image_data,
             "alerts": alerts_data
         }
@@ -85,18 +75,7 @@ def profile_info():
         return jsonify({"error": "Error interno del servidor al procesar el perfil"}), 500
 
 
-@bp.route('/api/v1/user/organizations', methods=['GET'])
-@login_required
-def get_user_organizations():
-    """Devuelve las organizaciones a las que pertenece el usuario actual."""
-    try:
-        organizations = _get_user_organizations()
-        return jsonify({"organizations": organizations}), 200
-    except Exception as e:
-        logger.getChild('user').error(
-            f"Error al obtener organizaciones de usuario: {str(e)}", exc_info=True
-        )
-        return jsonify({"error": "Error interno del servidor"}), 500
+## Endpoint eliminado: /api/v1/user/organizations
 
 @bp.route('/api/v1/user/sidebar-info', methods=['GET'])
 @login_required

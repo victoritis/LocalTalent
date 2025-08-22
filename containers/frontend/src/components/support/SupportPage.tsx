@@ -28,7 +28,7 @@ export function SupportPage() {
           
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Equipo de CVE-Sentinel
+              Equipo de LocalTalent
             </p>
           </div>
         </CardContent>

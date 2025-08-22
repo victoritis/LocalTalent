@@ -61,7 +61,8 @@ def receive_before_update(mapper, connection, target):
 
 # Función para inicializar los oyentes de los eventos
 def setup_base():
-    for model in [Organization, User, OrgUser, Alert, Product]:
+    # Modelos activos (sin organizaciones)
+    for model in [User, JWTToken, Feedback]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -159,7 +160,7 @@ def record_audit(mapper, connection, target):
 
 # # Configuración de los oyentes para los modelos (auditoría)
 def setup_audit():
-    for model in [Organization, User, OrgUser, Alert, Product]:  
+    for model in [User, Feedback]:  
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -176,21 +177,7 @@ def delete(target):
         
 
 # Modelo Organization
-class Organization(Base):
-    __tablename__ = 'organization'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(255), nullable=False, unique=True)
-    logo_path = db.Column(db.String(255), nullable=True)
-
-    # Relaciones
-    users = db.relationship('OrgUser', back_populates='organization')
-    alerts = db.relationship(
-        'Alert',
-        back_populates='organization',
-        lazy='dynamic',
-        cascade='all, delete-orphan'
-    )
+## MODELO ELIMINADO: Organization
 
 
             
@@ -208,9 +195,7 @@ class User(Base, UserMixin):
     profile_image = db.Column(db.String(255), nullable=True, default='/static/default_profile.png')
     
     
-    # Relación con organizaciones a través de OrgUser
-    organizations = db.relationship('OrgUser', back_populates='user', lazy='dynamic', cascade="all, delete-orphan")
-    # Nueva columna ROL_SUPERADMIN, por defecto es False
+    # Campo de roles especiales (conservado)
     special_roles = db.Column(db.ARRAY(db.String), default=[])
 
     def set_password(self, password):
@@ -256,7 +241,7 @@ class User(Base, UserMixin):
     def get_otp_uri(self):
         return pyotp.totp.TOTP(self.otp_secret).provisioning_uri(
             name=self.email, 
-            issuer_name="CVE-SENTINEL"
+            issuer_name="LocalTalent"
         )
 
     def verify_otp(self, otp_code):
@@ -297,58 +282,7 @@ class User(Base, UserMixin):
         found_user = db.session.query(User).filter_by(email=email).first()
         return found_user
     
-    def get_roles_for_organization(self, organization_id):
-        """
-        Obtiene los roles específicos de este usuario para una organización dada.
-        Consulta OrgUser directamente para evitar problemas con el estado de la relación.
-        """
-        from app.models import OrgUser
-        
-        org_user_link = db.session.query(OrgUser).filter_by(
-            user_id=self.id,
-            organization_id=organization_id
-        ).first()
-
-        if org_user_link and org_user_link.roles:
-            if isinstance(org_user_link.roles, str):
-                try:
-                    roles_list = json.loads(org_user_link.roles)
-                    return roles_list if isinstance(roles_list, list) else []
-                except json.JSONDecodeError:
-                    return []
-            elif isinstance(org_user_link.roles, list):
-                return org_user_link.roles
-            else:
-                return []
-        return []  
-    
-    def get_organization_invitation_token(self, organization_id: int, role: str = 'ROLE_USER', expires_in: int = 172800) -> str:  # MODIFICADO: 172800 segundos (2 días)
-        """
-        Genera un token JWT para invitar al usuario a la organización indicada.
-        """
-        payload = {
-            'invite_user_id': self.id,
-            'organization_id': organization_id,
-            'role': role,
-            'exp': time() + expires_in
-        }
-        return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
-
-    @staticmethod
-    def verify_organization_invitation_token(token: str) -> Optional[dict]:
-        """
-        Decodifica el token de invitación y devuelve el payload si es válido,
-        o None en caso de error o expiración.
-        """
-        try:
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-            if all(k in data for k in ('invite_user_id', 'organization_id', 'role')):
-                return data
-        except jwt.ExpiredSignatureError:
-            current_app.logger.warning("Token de invitación expirado.")
-        except jwt.InvalidTokenError as e:
-            current_app.logger.warning(f"Token de invitación inválido: {e}")
-        return None
+    # Métodos relacionados con organizaciones eliminados
 
 @login.user_loader
 def load_user(id):
@@ -356,19 +290,7 @@ def load_user(id):
 
 
 
-# Modelo OrgUser (Relación intermedia entre Organization y User)
-class OrgUser(Base):
-    __tablename__ = 'org_user'
-
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), primary_key=True)
-    roles = db.Column(db.ARRAY(db.String), default=['ROLE_USER'])
-
-    # Relación bidireccional con Organization
-    organization = db.relationship('Organization', back_populates='users')
-
-    # Relación bidireccional con User
-    user = db.relationship('User', back_populates='organizations')
+## MODELO ELIMINADO: OrgUser
     
     
     
@@ -427,110 +349,27 @@ class JWTToken(db.Model):
     
     
 #No hereda de BAse porque no queremos registrar cada operacion de las CVEs
-class CVE(db.Model):
-    __tablename__ = 'cve'
-
-    id = db.Column(db.String(255), primary_key=True)  # Hace referencia al cve_name
-    published = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    last_modified = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-    data = db.Column(JSON, nullable=False)  # JSON field to store additional data
-    cpe_match = db.Column(db.ARRAY(db.String), default=list)  # Nuevo campo para almacenar CPEs como array
-    matchCriteriaId = db.Column(db.ARRAY(db.String), default=list)
-    cvss_score = db.Column(db.Float)
-    cvss_version = db.Column(db.String(10))
-    status = db.Column(db.String)  # Nuevo campo de tipo string
-
-    def __repr__(self):
-        return f"<CVE {self.cve_name}>"
+## MODELOS LEGACY ELIMINADOS: CVE
 
 #No hereda de BAse porque no queremos registrar cada operacion de las CVEs
-class CPE(db.Model):
-    __tablename__ = 'cpe'
-
-    id = db.Column(db.String(255), primary_key=True)  #CPE
-    published = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    last_modified = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-    cpeNameId = db.Column(db.String(255), default=list)
-    deprecated = db.Column(db.Boolean, default=False)
-    data = db.Column(JSON)  # JSON para almecenar todo el CPE
-
-    def __repr__(self):
-        return f"<CPE {self.cpe_name}>"
+## MODELOS LEGACY ELIMINADOS: CPE
  
     
-class TasksInfo(db.Model):
-    __tablename__ = 'tasks_info'
-
-    name = db.Column(db.String(255), primary_key=True)
-    last_update = db.Column(db.DateTime)
-    load_percentage = db.Column(db.Integer)
-
-    def __repr__(self):
-        return f'<TasksInfo {self.name}>'
+## MODELO LEGACY ELIMINADO: TasksInfo
     
     
     
-class Product(Base):
-    __tablename__ = 'product'
-
-    org = db.Column(db.Integer, db.ForeignKey('organization.id'), primary_key=True)
-    cpe = db.Column(db.String(255), db.ForeignKey('cpe.id'), primary_key=True)
-    send_email = db.Column(db.Boolean, default=True)
-
-    # Relaciones
-    organization = db.relationship('Organization', backref=db.backref('products', lazy='dynamic'))
-    cpe_info = db.relationship('CPE')
-
-    # Añadir método to_dict si no existe
-    def to_dict(self):
-        return {
-            'org': self.org,
-            'cpe': self.cpe,
-            'send_email': self.send_email,
-            'createdAt': self.createdAt.isoformat() if self.createdAt else None,
-            'updatedAt': self.updatedAt.isoformat() if self.updatedAt else None,
-        }
-
-    def __repr__(self):
-        return f"<Product org={self.org}, cpe={self.cpe}, send_email={self.send_email}>"
+## MODELO LEGACY ELIMINADO: Product
     
     
 
-class Alert(Base):
-    __tablename__ = 'alert'
-
-    org = db.Column(db.Integer, db.ForeignKey('organization.id'), primary_key=True)
-    cve = db.Column(db.String(255), db.ForeignKey('cve.id'), primary_key=True)
-    cpe = db.Column(db.String(255), db.ForeignKey('cpe.id'), primary_key=True)
-    active = db.Column(db.Boolean, default=True)
-    
-    # Relaciones
-    organization = db.relationship('Organization', back_populates='alerts')
-    cve_info = db.relationship('CVE')
-    cpe_info = db.relationship('CPE')
-    
-    def __repr__(self):
-        return f"<Alert org={self.org}, cve={self.cve}, cpe={self.cpe}, active={self.active}>"
+## MODELO LEGACY ELIMINADO: Alert
     
     
     
 
 # Definir el modelo de la base de datos
-class Match(db.Model):
-    __tablename__ = 'match'
-
-    matchCriteriaId = db.Column(db.String(255), primary_key=True)  # matchCriteriaId
-    criteria = db.Column(db.String(255), nullable=False)
-    cpeName = db.Column(db.ARRAY(db.String), default=list)  # Array de cpeName
-    cpeNameId = db.Column(db.ARRAY(db.String), default=list)  # Array de cpeNameId
-    data = db.Column(db.JSON, nullable=False)  # JSON completo
-    
-    def __repr__(self):
-        return f"<CPEMatch id={self.matchCriteriaId}, criteria={self.criteria}, cpeName={self.cpeName}, cpeNameId={self.cpeNameId}>"
-
-# Registrar listeners al importar el módulo
-setup_base()
-setup_audit()
+## MODELO LEGACY ELIMINADO: Match
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
@@ -542,6 +381,10 @@ class Feedback(db.Model):
 
     def __repr__(self):
         return f'<Feedback {self.id}>'
+
+# Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos
+setup_base()
+setup_audit()
 
 
 

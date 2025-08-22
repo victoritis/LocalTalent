@@ -103,30 +103,7 @@ export async function fetchOrgAdminOrganizations(page: number = 1): Promise<Orga
 
 
 /* PARA LA LISTA DE ORGANIZACIONES DE UN USUARIO */
-export async function fetchGetUserOrganizationsNames():
-  Promise<{organizations: Array<{id: number, name: string}>}> {
-  try {
-    const response = await fetch(`${apiUrl}/api/v1/user/organizations`, {
-      credentials: "include",
-    });
-    
-    
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      throw new Error(data.error || "Error fetching organizations");
-    }
-    
-    return data; // Devolvemos el JSON completo
-  } catch (error) {
-    if (error instanceof Error) {
-
-      throw new Error(error.message || "Failed to fetch user organizations");
-    } else {
-      throw new Error("Failed to fetch user organizations");
-    }
-  }
-}
+// fetchGetUserOrganizationsNames eliminado (organizaciones removidas)
 
 
 /**

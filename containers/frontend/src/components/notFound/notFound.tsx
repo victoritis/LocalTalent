@@ -95,7 +95,7 @@ const Error404Page = () => {
         <div className="mt-8 text-sm text-muted-foreground">
           ¿Necesitas ayuda? Contacta a{" "}
           <a
-            href="mailto:soporte@cve-sentinel.csa.es"
+            href="mailto:soporte@localtalent.es"
             className="text-primary hover:underline font-medium"
           >
             soporte@cvesentinel.csa.es          </a>

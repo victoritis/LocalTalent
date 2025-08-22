@@ -39,7 +39,7 @@ def setup_logger():
         'email': 'cve-sentinel.email',
         'error': 'cve-sentinel.error',
         'main': 'cve-sentinel.main',
-        'organization': 'cve-sentinel.organization',
+    # 'organization' logger eliminado
         'user': 'cve-sentinel.user',
         'products': 'cve-sentinel.products'
     }
