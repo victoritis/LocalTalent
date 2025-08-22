@@ -34,8 +34,8 @@ services:
       target: development
     ports:
       - 5173:5173
-    # volumes:
-    #   - ./containers/frontend:/app
+    volumes:
+      - ./containers/frontend:/app
     env_file:
       - ./containers/frontend/.env.local
 
