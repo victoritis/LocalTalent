@@ -13,10 +13,9 @@ export interface AuthContextInterface {
   loadSession: () => Promise<void>;
   roles: {
     ROLE_SUPERADMIN: boolean;
-    ROLE_ORG_ADMIN: boolean;
     ROLE_USER: boolean;
   };
-  getRoles: () => Promise<{ ROLE_SUPERADMIN: boolean; ROLE_ORG_ADMIN: boolean; ROLE_USER: boolean; }>;
+  getRoles: () => Promise<{ ROLE_SUPERADMIN: boolean; ROLE_USER: boolean }>;
   setRoles: () => Promise<void>;
   rolesLoaded: boolean;
 }
@@ -27,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<string | null>(null);
   const [roles, setInternalRoles] = React.useState({
     ROLE_SUPERADMIN: false,
-    ROLE_ORG_ADMIN: false,
     ROLE_USER: false,
   });
   const [rolesLoaded, setRolesLoaded] = React.useState(false);
@@ -42,6 +40,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (data?.username) {
           setSession({ username: data.username, userId: data.user_id, email: data.email, roles: data.roles || [] });
+          // Fallback derivado de sesión para evitar pantallas en blanco si /get-roles tarda
+          const sessionRoles = Array.isArray(data.roles) ? data.roles as string[] : [];
+          const isSuper = sessionRoles.includes('ROLE_SUPERADMIN');
+          const isUser = sessionRoles.includes('ROLE_USER') || (!isSuper && true); // fallback: autenticado no superadmin -> user
+          setInternalRoles(prev => ({
+            ROLE_SUPERADMIN: isSuper,
+            ROLE_USER: isUser,
+          }));
+          // Permitir render aunque /get-roles aún no haya cargado
+          setRolesLoaded(true);
         }
       }
     } catch (e) {
@@ -102,9 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [updateRoles]);
 
   useEffect(() => {
+    // Intenta cargar roles del endpoint y también deriva desde sesión como respaldo
     setRoles();
-  loadSession();
-  }, [setRoles]);
+    loadSession();
+  }, [setRoles, loadSession]);
 
   if (!rolesLoaded) {
     return <LoadingPage />;

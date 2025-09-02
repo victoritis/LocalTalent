@@ -32,8 +32,6 @@ const LoginRecoverPasswordLazyImport = createFileRoute(
 const AuthSupportLazyImport = createFileRoute('/auth/support')()
 const AuthHomeLazyImport = createFileRoute('/auth/home')()
 const AuthFeedbackLazyImport = createFileRoute('/auth/feedback')()
-const AuthUsernameHomeLazyImport = createFileRoute('/auth/$username/home')()
-// Removed favorites/profile routes for reusable base
 
 // Create/Update Routes
 
@@ -108,14 +106,6 @@ const AuthUserRoute = AuthUserImport.update({
   path: '/user',
   getParentRoute: () => AuthRoute,
 } as any)
-
-const AuthUsernameHomeLazyRoute = AuthUsernameHomeLazyImport.update({
-  id: '/$username/home',
-  path: '/$username/home',
-  getParentRoute: () => AuthRoute,
-} as any).lazy(() =>
-  import('./routes/auth/$username/home.lazy').then((d) => d.Route),
-)
 
 const AuthSuperadminDashboardRoute = AuthSuperadminDashboardImport.update({
   id: '/superadmin/dashboard',
@@ -211,13 +201,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSuperadminDashboardImport
       parentRoute: typeof AuthImport
     }
-    '/auth/$username/home': {
-      id: '/auth/$username/home'
-      path: '/$username/home'
-      fullPath: '/auth/$username/home'
-      preLoaderRoute: typeof AuthUsernameHomeLazyImport
-      parentRoute: typeof AuthImport
-    }
   }
 }
 
@@ -229,7 +212,6 @@ interface AuthRouteChildren {
   AuthHomeLazyRoute: typeof AuthHomeLazyRoute
   AuthSupportLazyRoute: typeof AuthSupportLazyRoute
   AuthSuperadminDashboardRoute: typeof AuthSuperadminDashboardRoute
-  AuthUsernameHomeLazyRoute: typeof AuthUsernameHomeLazyRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -238,7 +220,6 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthHomeLazyRoute: AuthHomeLazyRoute,
   AuthSupportLazyRoute: AuthSupportLazyRoute,
   AuthSuperadminDashboardRoute: AuthSuperadminDashboardRoute,
-  AuthUsernameHomeLazyRoute: AuthUsernameHomeLazyRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -270,7 +251,6 @@ export interface FileRoutesByFullPath {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -285,7 +265,6 @@ export interface FileRoutesByTo {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRoutesById {
@@ -302,7 +281,6 @@ export interface FileRoutesById {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -320,7 +298,6 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
-    | '/auth/$username/home'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -334,7 +311,6 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login'
     | '/auth/superadmin/dashboard'
-    | '/auth/$username/home'
   id:
     | '__root__'
     | '/'
@@ -349,7 +325,6 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
-    | '/auth/$username/home'
   fileRoutesById: FileRoutesById
 }
 
@@ -393,8 +368,7 @@ export const routeTree = rootRoute
         "/auth/feedback",
         "/auth/home",
         "/auth/support",
-        "/auth/superadmin/dashboard",
-        "/auth/$username/home"
+        "/auth/superadmin/dashboard"
       ]
     },
     "/login": {
@@ -438,10 +412,6 @@ export const routeTree = rootRoute
     },
     "/auth/superadmin/dashboard": {
       "filePath": "auth/superadmin/dashboard.tsx",
-      "parent": "/auth"
-    },
-    "/auth/$username/home": {
-      "filePath": "auth/$username/home.lazy.tsx",
       "parent": "/auth"
     }
   }
