@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, User } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 
 import {
   Avatar,
@@ -32,7 +32,7 @@ export function NavUser({
   user: { name: string; email: string; avatar: string | null }; // avatar puede ser null
 }) {
   const { isMobile } = useSidebar();
-  const { logout } = useAuth();
+  const { logout, session } = useAuth();
   const router = useRouter();
   
   const handleLogout = () => {
@@ -40,9 +40,7 @@ export function NavUser({
     router.navigate({ to: "/login" });
   };
 
-  const handleProfileRedirect = () => {
-    router.navigate({ to: "/auth/user/profile" }); 
-  };
+  // Perfil eliminado en esta base reusable
 
   return (
     <SidebarMenu>
@@ -87,12 +85,6 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleProfileRedirect}>
-                <User className="mr-2 h-4 w-4" /> 
-                <span>Perfil</span>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />

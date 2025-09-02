@@ -6,4 +6,4 @@ Para restablecer tu contraseña, visita el siguiente enlace:
 Si no solicitaste este cambio, por favor ignora este mensaje.
 
 Saludos,
-El equipo de CVE-Sentinel
+El equipo de la aplicación

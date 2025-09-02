@@ -10,12 +10,12 @@ function SuperAdminDashboard() {
   const { roles } = useAuth()
 
   if (!roles?.ROLE_SUPERADMIN) {
-    throw redirect({ to: '/auth/user/profile' })
+    throw redirect({ to: '/auth/home' })
   }
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Panel SuperAdmin (LocalTalent)</h1>
+      <h1 className="text-2xl font-bold">Panel SuperAdmin</h1>
       <p className="text-muted-foreground text-sm">Cascarón inicial. Aquí añadiremos métricas y herramientas de administración global.</p>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded border p-4 bg-background/40">

@@ -27,9 +27,7 @@ export function SupportPage() {
           </Alert>
           
           <div className="mt-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Equipo de LocalTalent
-            </p>
+            <p className="text-sm text-muted-foreground">Equipo de la aplicación</p>
           </div>
         </CardContent>
       </Card>

@@ -8,8 +8,8 @@ function LoginPage() {
       <div className="flex flex-col gap-4 p-6 md:p-10 bg-blue-100 bg-opacity-20">
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2">
-            <img src="/images/cve-sentinel2.png" alt="Logo LocalTalent" className="size-8 object-contain" />
-            <span className="truncate font-semibold">LocalTalent</span>
+            <img src="/images/cve-sentinel2.png" alt="App Logo" className="size-8 object-contain" />
+            <span className="truncate font-semibold">App Starter</span>
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">

@@ -107,7 +107,7 @@
 }
 
 
-/* CSS global principal del frontend LocalTalent */
+/* CSS global principal del frontend base */
 .badge-active-shimmer {
   position: relative;
   overflow: hidden; /* Para contener el pseudo-elemento de la animación */

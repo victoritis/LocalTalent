@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Frame, LifeBuoy, Send, Music2, Heart } from "lucide-react";
+import { Frame, LifeBuoy, Send, Music2 } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
+import { useAuth } from '@/auth';
 import { NavMain } from "@/components/navBar/nav-main";
 import { NavProjects } from "@/components/navBar/nav-projects";
 import { NavSecondary } from "@/components/navBar/nav-secondary";
@@ -67,8 +68,7 @@ const initialUserData: UserData = {
 const staticData: StaticData = {
   user: initialUserData, // Usar los datos iniciales
   navMain: [
-    { title: 'Inicio', url: '/auth/home', icon: Music2 },
-    { title: 'Favoritos', url: '/auth/favorites', icon: Heart }
+    { title: 'Inicio', url: '/auth/$username/home', icon: Music2 }
   ],
   navSecondary: [
     { title: "Support", url: "/auth/support", icon: LifeBuoy },
@@ -81,38 +81,34 @@ const staticData: StaticData = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
-  const [navMain] = React.useState<NavItem[]>(staticData.navMain);
+  const { session } = useAuth();
+  const username = session?.username;
+  const [navMain, setNavMain] = React.useState<NavItem[]>([]);
   const [navSecondary, setNavSecondary] = React.useState(staticData.navSecondary);
   const [currentUserData, setCurrentUserData] = React.useState<UserData>(initialUserData);
-  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL || "";
 
   React.useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/api/v1/user/sidebar-info`, {
-          credentials: "include",
-        });
-        if (!response.ok) {
-          throw new Error(`Error fetching user data: ${response.status}`);
-        }
-        const data = await response.json();
-        setCurrentUserData({
-          name: data.name || "Usuario",
-          email: data.email || "error@example.com",
-          avatar: data.avatar, // Esto ya debería ser 'data:image/...;base64,...' o null
-        });
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        setCurrentUserData({ // Fallback en caso de error
-          name: "Error",
-          email: "No se pudo cargar",
-          avatar: null, 
-        });
-      }
-    };
+    // Construir rutas dinámicas cuando tengamos username
+    if (username) {
+      setNavMain(
+        staticData.navMain.map(item => ({
+          ...item,
+          url: item.url.replace('$username', username)
+        }))
+      )
+    }
+  }, [username]);
 
-    fetchUserData();
-  }, [apiUrl]);
+  // Derivar datos básicos del usuario desde la sesión
+  React.useEffect(() => {
+    if (session?.username) {
+      setCurrentUserData({
+        name: session.username,
+        email: session.email || "",
+        avatar: null,
+      })
+    }
+  }, [session])
 
   React.useEffect(() => {
     // Highlight secondary navigation based on current path
@@ -132,10 +128,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <img src="/images/cve-sentinel2.png" alt="Logo LocalTalent" className="size-8 object-contain" />
+                <img src="/images/cve-sentinel2.png" alt="App Logo" className="size-8 object-contain" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">LocalTalent</span>
-                  <span className="truncate text-xs">CSA Pro Edition</span>
+                  <span className="truncate font-semibold">App Starter</span>
+                  <span className="truncate text-xs">Reusable Base</span>
                 </div>
               </a>
             </SidebarMenuButton>

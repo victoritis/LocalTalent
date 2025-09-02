@@ -1,6 +1,7 @@
 // user/__root.tsx
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { useAuth } from '@/auth';
 import ErrorPage from "@/components/error/ErrorPage";
 
 export const Route = createFileRoute("/auth")({
@@ -26,8 +27,5 @@ export const Route = createFileRoute("/auth")({
 });
 
 function UserLayout() {
-  return <DashboardLayout>
-            <Outlet />
-          </DashboardLayout>;
-
+  return <DashboardLayout><Outlet /></DashboardLayout>;
 }

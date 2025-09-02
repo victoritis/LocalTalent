@@ -17,7 +17,6 @@ import { Route as LoginImport } from './routes/login'
 import { Route as AuthImport } from './routes/auth'
 import { Route as LoginIndexRouteImport } from './routes/login/index.route'
 import { Route as AuthUserImport } from './routes/auth/user'
-import { Route as AuthUserProfileImport } from './routes/auth/user/profile'
 import { Route as AuthSuperadminDashboardImport } from './routes/auth/superadmin/dashboard'
 
 // Create Virtual Routes
@@ -33,8 +32,8 @@ const LoginRecoverPasswordLazyImport = createFileRoute(
 const AuthSupportLazyImport = createFileRoute('/auth/support')()
 const AuthHomeLazyImport = createFileRoute('/auth/home')()
 const AuthFeedbackLazyImport = createFileRoute('/auth/feedback')()
-const AuthFavoritesLazyImport = createFileRoute('/auth/favorites')()
-const AuthUserIndexLazyImport = createFileRoute('/auth/user/')()
+const AuthUsernameHomeLazyImport = createFileRoute('/auth/$username/home')()
+// Removed favorites/profile routes for reusable base
 
 // Create/Update Routes
 
@@ -104,33 +103,19 @@ const AuthFeedbackLazyRoute = AuthFeedbackLazyImport.update({
   getParentRoute: () => AuthRoute,
 } as any).lazy(() => import('./routes/auth/feedback.lazy').then((d) => d.Route))
 
-const AuthFavoritesLazyRoute = AuthFavoritesLazyImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => AuthRoute,
-} as any).lazy(() =>
-  import('./routes/auth/favorites.lazy').then((d) => d.Route),
-)
-
 const AuthUserRoute = AuthUserImport.update({
   id: '/user',
   path: '/user',
   getParentRoute: () => AuthRoute,
 } as any)
 
-const AuthUserIndexLazyRoute = AuthUserIndexLazyImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthUserRoute,
+const AuthUsernameHomeLazyRoute = AuthUsernameHomeLazyImport.update({
+  id: '/$username/home',
+  path: '/$username/home',
+  getParentRoute: () => AuthRoute,
 } as any).lazy(() =>
-  import('./routes/auth/user/index.lazy').then((d) => d.Route),
+  import('./routes/auth/$username/home.lazy').then((d) => d.Route),
 )
-
-const AuthUserProfileRoute = AuthUserProfileImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthUserRoute,
-} as any)
 
 const AuthSuperadminDashboardRoute = AuthSuperadminDashboardImport.update({
   id: '/superadmin/dashboard',
@@ -168,13 +153,6 @@ declare module '@tanstack/react-router' {
       path: '/user'
       fullPath: '/auth/user'
       preLoaderRoute: typeof AuthUserImport
-      parentRoute: typeof AuthImport
-    }
-    '/auth/favorites': {
-      id: '/auth/favorites'
-      path: '/favorites'
-      fullPath: '/auth/favorites'
-      preLoaderRoute: typeof AuthFavoritesLazyImport
       parentRoute: typeof AuthImport
     }
     '/auth/feedback': {
@@ -233,55 +211,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSuperadminDashboardImport
       parentRoute: typeof AuthImport
     }
-    '/auth/user/profile': {
-      id: '/auth/user/profile'
-      path: '/profile'
-      fullPath: '/auth/user/profile'
-      preLoaderRoute: typeof AuthUserProfileImport
-      parentRoute: typeof AuthUserImport
-    }
-    '/auth/user/': {
-      id: '/auth/user/'
-      path: '/'
-      fullPath: '/auth/user/'
-      preLoaderRoute: typeof AuthUserIndexLazyImport
-      parentRoute: typeof AuthUserImport
+    '/auth/$username/home': {
+      id: '/auth/$username/home'
+      path: '/$username/home'
+      fullPath: '/auth/$username/home'
+      preLoaderRoute: typeof AuthUsernameHomeLazyImport
+      parentRoute: typeof AuthImport
     }
   }
 }
 
 // Create and export the route tree
 
-interface AuthUserRouteChildren {
-  AuthUserProfileRoute: typeof AuthUserProfileRoute
-  AuthUserIndexLazyRoute: typeof AuthUserIndexLazyRoute
-}
-
-const AuthUserRouteChildren: AuthUserRouteChildren = {
-  AuthUserProfileRoute: AuthUserProfileRoute,
-  AuthUserIndexLazyRoute: AuthUserIndexLazyRoute,
-}
-
-const AuthUserRouteWithChildren = AuthUserRoute._addFileChildren(
-  AuthUserRouteChildren,
-)
-
 interface AuthRouteChildren {
-  AuthUserRoute: typeof AuthUserRouteWithChildren
-  AuthFavoritesLazyRoute: typeof AuthFavoritesLazyRoute
+  AuthUserRoute: typeof AuthUserRoute
   AuthFeedbackLazyRoute: typeof AuthFeedbackLazyRoute
   AuthHomeLazyRoute: typeof AuthHomeLazyRoute
   AuthSupportLazyRoute: typeof AuthSupportLazyRoute
   AuthSuperadminDashboardRoute: typeof AuthSuperadminDashboardRoute
+  AuthUsernameHomeLazyRoute: typeof AuthUsernameHomeLazyRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
-  AuthUserRoute: AuthUserRouteWithChildren,
-  AuthFavoritesLazyRoute: AuthFavoritesLazyRoute,
+  AuthUserRoute: AuthUserRoute,
   AuthFeedbackLazyRoute: AuthFeedbackLazyRoute,
   AuthHomeLazyRoute: AuthHomeLazyRoute,
   AuthSupportLazyRoute: AuthSupportLazyRoute,
   AuthSuperadminDashboardRoute: AuthSuperadminDashboardRoute,
+  AuthUsernameHomeLazyRoute: AuthUsernameHomeLazyRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -304,8 +261,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
-  '/auth/user': typeof AuthUserRouteWithChildren
-  '/auth/favorites': typeof AuthFavoritesLazyRoute
+  '/auth/user': typeof AuthUserRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
@@ -314,14 +270,13 @@ export interface FileRoutesByFullPath {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/user/profile': typeof AuthUserProfileRoute
-  '/auth/user/': typeof AuthUserIndexLazyRoute
+  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
-  '/auth/favorites': typeof AuthFavoritesLazyRoute
+  '/auth/user': typeof AuthUserRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
@@ -330,8 +285,7 @@ export interface FileRoutesByTo {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/user/profile': typeof AuthUserProfileRoute
-  '/auth/user': typeof AuthUserIndexLazyRoute
+  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRoutesById {
@@ -339,8 +293,7 @@ export interface FileRoutesById {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
-  '/auth/user': typeof AuthUserRouteWithChildren
-  '/auth/favorites': typeof AuthFavoritesLazyRoute
+  '/auth/user': typeof AuthUserRoute
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
@@ -349,8 +302,7 @@ export interface FileRoutesById {
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
-  '/auth/user/profile': typeof AuthUserProfileRoute
-  '/auth/user/': typeof AuthUserIndexLazyRoute
+  '/auth/$username/home': typeof AuthUsernameHomeLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -360,7 +312,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/login'
     | '/auth/user'
-    | '/auth/favorites'
     | '/auth/feedback'
     | '/auth/home'
     | '/auth/support'
@@ -369,13 +320,12 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
-    | '/auth/user/profile'
-    | '/auth/user/'
+    | '/auth/$username/home'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/auth/favorites'
+    | '/auth/user'
     | '/auth/feedback'
     | '/auth/home'
     | '/auth/support'
@@ -384,15 +334,13 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login'
     | '/auth/superadmin/dashboard'
-    | '/auth/user/profile'
-    | '/auth/user'
+    | '/auth/$username/home'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/login'
     | '/auth/user'
-    | '/auth/favorites'
     | '/auth/feedback'
     | '/auth/home'
     | '/auth/support'
@@ -401,8 +349,7 @@ export interface FileRouteTypes {
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
-    | '/auth/user/profile'
-    | '/auth/user/'
+    | '/auth/$username/home'
   fileRoutesById: FileRoutesById
 }
 
@@ -443,11 +390,11 @@ export const routeTree = rootRoute
       "filePath": "auth.tsx",
       "children": [
         "/auth/user",
-        "/auth/favorites",
         "/auth/feedback",
         "/auth/home",
         "/auth/support",
-        "/auth/superadmin/dashboard"
+        "/auth/superadmin/dashboard",
+        "/auth/$username/home"
       ]
     },
     "/login": {
@@ -460,14 +407,6 @@ export const routeTree = rootRoute
     },
     "/auth/user": {
       "filePath": "auth/user.tsx",
-      "parent": "/auth",
-      "children": [
-        "/auth/user/profile",
-        "/auth/user/"
-      ]
-    },
-    "/auth/favorites": {
-      "filePath": "auth/favorites.lazy.tsx",
       "parent": "/auth"
     },
     "/auth/feedback": {
@@ -501,13 +440,9 @@ export const routeTree = rootRoute
       "filePath": "auth/superadmin/dashboard.tsx",
       "parent": "/auth"
     },
-    "/auth/user/profile": {
-      "filePath": "auth/user/profile.tsx",
-      "parent": "/auth/user"
-    },
-    "/auth/user/": {
-      "filePath": "auth/user/index.lazy.tsx",
-      "parent": "/auth/user"
+    "/auth/$username/home": {
+      "filePath": "auth/$username/home.lazy.tsx",
+      "parent": "/auth"
     }
   }
 }

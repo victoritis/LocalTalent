@@ -240,8 +240,8 @@ class User(Base, UserMixin):
 
     def get_otp_uri(self):
         return pyotp.totp.TOTP(self.otp_secret).provisioning_uri(
-            name=self.email, 
-            issuer_name="LocalTalent"
+            name=self.email,
+            issuer_name="App Starter"
         )
 
     def verify_otp(self, otp_code):
@@ -385,6 +385,5 @@ class Feedback(db.Model):
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos
 setup_base()
 setup_audit()
-
 
 

@@ -7,7 +7,7 @@ def send_password_reset_email(user):
     frontend_base_url = current_app.config.get('FRONTEND_BASE_URL')
     reset_url = f"{frontend_base_url}/login/reset-password?token={token}"
 
-    subject = '[CVE-Sentinel] Restablece tu contraseña'
+    subject = '[App Starter] Restablece tu contraseña'
     sender = current_app.config['MAIL_DEFAULT_SENDER']
     recipients = [user.email]
 
@@ -22,7 +22,7 @@ def send_create_account_email(user):
     frontend_base_url = current_app.config.get('FRONTEND_BASE_URL')
     reset_url = f"{frontend_base_url}/register/create-account?token={token}"
 
-    subject = '[CVE-SENTINEL] Crea tu cuenta'
+    subject = '[App Starter] Crea tu cuenta'
     sender = current_app.config['MAIL_DEFAULT_SENDER']
     recipients = [user.email]
 

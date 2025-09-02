@@ -20,22 +20,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { LocationSelector } from '@/components/location/LocationSelector';
-// Organización eliminada: se retira fetchGetUserOrganizationsNames
+// Organización eliminada: se retira fetchGetUserOrganizationsNames y selector de ubicación
 
 export function NavProjects({ projects }: { projects: { name: string; url: string; icon: LucideIcon }[] }) {
-  // Ya no se listan proyectos dinámicos; se muestra selector de ubicación global
-
+  // Placeholder sin contenido específico del dominio
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
         <SidebarMenuButton asChild>
-          <div className="w-full flex justify-start">
-            <LocationSelector />
+          <div className="w-full flex justify-start text-xs text-muted-foreground px-2 py-1.5">
+            Projects placeholder
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarGroup>
   );
 }
-
