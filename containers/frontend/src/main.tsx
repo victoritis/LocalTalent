@@ -4,6 +4,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { AuthProvider, useAuth } from "./auth";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 import { Toaster } from "@/components/ui/sonner"; // Importar Toaster
 
 // Set up a Router instance
