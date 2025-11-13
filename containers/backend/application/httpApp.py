@@ -1,7 +1,7 @@
 import os
 from flask import request
-from app import create_app, db
-from datetime import datetime, timezone 
+from app import create_app, db, socketio
+from datetime import datetime, timezone
 import click # Importar click para comandos CLI
 
 app = create_app()      
@@ -125,5 +125,5 @@ def add_cors_headers(response):                             #Seguramente haya qu
 
 if __name__ == "__main__":
     basedir = os.path.abspath(os.path.dirname(__file__))
-    app.run(host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000)
 

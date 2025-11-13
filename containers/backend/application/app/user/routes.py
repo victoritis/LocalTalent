@@ -3,7 +3,7 @@ from flask_login import current_user, login_required
 from app.user import bp
 from app.logger_config import logger
 from app import db
-from app.models import User
+from app.models import User, Portfolio
 import os
 from werkzeug.utils import secure_filename
 
@@ -66,6 +66,7 @@ def get_my_profile():
             'profile_image': user.profile_image,
             'bio': user.bio,
             'skills': user.skills or [],
+            'category': user.category,
             'address': user.address,
             'city': user.city,
             'country': user.country,
@@ -96,6 +97,8 @@ def update_my_profile():
             user.bio = data['bio']
         if 'skills' in data:
             user.skills = data['skills'] if isinstance(data['skills'], list) else []
+        if 'category' in data:
+            user.category = data['category']
         if 'address' in data:
             user.address = data['address']
         if 'city' in data:
@@ -122,6 +125,7 @@ def update_my_profile():
                 'profile_image': user.profile_image,
                 'bio': user.bio,
                 'skills': user.skills or [],
+                'category': user.category,
                 'address': user.address,
                 'city': user.city,
                 'country': user.country,
@@ -157,6 +161,7 @@ def get_public_profile(username):
             'profile_image': user.profile_image,
             'bio': user.bio,
             'skills': user.skills or [],
+            'category': user.category,
             'city': user.city,
             'country': user.country,
             'created_at': user.createdAt.isoformat() if user.createdAt else None
@@ -214,13 +219,22 @@ def upload_profile_image():
 def get_users_for_map():
     """Obtener todos los usuarios con ubicación para el mapa global"""
     try:
-        # Solo usuarios con ubicación definida
-        users = User.query.filter(
+        # Obtener parámetro de filtro por categoría
+        category_filter = request.args.get('category', None)
+
+        # Base query: Solo usuarios con ubicación definida
+        query = User.query.filter(
             User.is_enabled == True,
             User.deletedAt.is_(None),
             User.latitude.isnot(None),
             User.longitude.isnot(None)
-        ).all()
+        )
+
+        # Aplicar filtro de categoría si existe
+        if category_filter:
+            query = query.filter(User.category == category_filter)
+
+        users = query.all()
 
         users_data = []
         for user in users:
@@ -235,7 +249,8 @@ def get_users_for_map():
                 'country': user.country,
                 'latitude': user.latitude,
                 'longitude': user.longitude,
-                'skills': user.skills or []
+                'skills': user.skills or [],
+                'category': user.category
             })
 
         return jsonify({
@@ -245,3 +260,233 @@ def get_users_for_map():
     except Exception as e:
         logger.getChild('user').error(f"Error obteniendo usuarios para mapa: {str(e)}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/categories', methods=['GET'])
+def get_categories():
+    """Obtener lista de categorías de talento disponibles"""
+    try:
+        categories = [
+            {'value': 'musician', 'label': 'Músico'},
+            {'value': 'artist', 'label': 'Artista'},
+            {'value': 'developer', 'label': 'Desarrollador'},
+            {'value': 'designer', 'label': 'Diseñador'},
+            {'value': 'photographer', 'label': 'Fotógrafo'},
+            {'value': 'writer', 'label': 'Escritor'},
+            {'value': 'chef', 'label': 'Chef'},
+            {'value': 'athlete', 'label': 'Atleta'},
+            {'value': 'teacher', 'label': 'Profesor'},
+            {'value': 'other', 'label': 'Otro'}
+        ]
+        return jsonify({'categories': categories}), 200
+    except Exception as e:
+        logger.getChild('user').error(f"Error obteniendo categorías: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+# === PORTFOLIO ENDPOINTS ===
+
+@bp.route('/api/v1/portfolio', methods=['GET'])
+@login_required
+def get_my_portfolio():
+    """Obtener portfolio del usuario autenticado"""
+    try:
+        items = Portfolio.query.filter_by(
+            user_id=current_user.id,
+            deletedAt=None
+        ).order_by(Portfolio.order, Portfolio.createdAt.desc()).all()
+
+        items_data = []
+        for item in items:
+            items_data.append({
+                'id': item.id,
+                'title': item.title,
+                'description': item.description,
+                'media_type': item.media_type,
+                'media_url': item.media_url,
+                'thumbnail_url': item.thumbnail_url,
+                'order': item.order,
+                'created_at': item.createdAt.isoformat() if item.createdAt else None
+            })
+
+        return jsonify({'items': items_data}), 200
+    except Exception as e:
+        logger.getChild('user').error(f"Error obteniendo portfolio: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/portfolio/<username>', methods=['GET'])
+def get_user_portfolio(username):
+    """Obtener portfolio público de un usuario"""
+    try:
+        user = User.query.filter(
+            User.email.like(f"{username}@%"),
+            User.is_enabled == True,
+            User.deletedAt.is_(None)
+        ).first()
+
+        if not user:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        items = Portfolio.query.filter_by(
+            user_id=user.id,
+            deletedAt=None
+        ).order_by(Portfolio.order, Portfolio.createdAt.desc()).all()
+
+        items_data = []
+        for item in items:
+            items_data.append({
+                'id': item.id,
+                'title': item.title,
+                'description': item.description,
+                'media_type': item.media_type,
+                'media_url': item.media_url,
+                'thumbnail_url': item.thumbnail_url,
+                'order': item.order,
+                'created_at': item.createdAt.isoformat() if item.createdAt else None
+            })
+
+        return jsonify({'items': items_data}), 200
+    except Exception as e:
+        logger.getChild('user').error(f"Error obteniendo portfolio público: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/portfolio', methods=['POST'])
+@login_required
+def create_portfolio_item():
+    """Crear nuevo item de portfolio"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se proporcionó ningún archivo'}), 400
+
+        file = request.files['file']
+        title = request.form.get('title', '')
+        description = request.form.get('description', '')
+        order = request.form.get('order', 0)
+
+        if file.filename == '':
+            return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+
+        if not title:
+            return jsonify({'error': 'El título es obligatorio'}), 400
+
+        # Validar tipo de archivo
+        allowed_image_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        allowed_video_extensions = {'mp4', 'webm', 'mov', 'avi'}
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+
+        media_type = None
+        if file_ext in allowed_image_extensions:
+            media_type = 'image'
+        elif file_ext in allowed_video_extensions:
+            media_type = 'video'
+        else:
+            return jsonify({'error': 'Tipo de archivo no permitido'}), 400
+
+        # Crear nombre de archivo seguro
+        filename = secure_filename(f"portfolio_{current_user.id}_{int(os.urandom(4).hex(), 16)}.{file_ext}")
+
+        # Directorio de uploads
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'static', 'uploads', 'portfolio')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+
+        # Crear registro en BD
+        portfolio_item = Portfolio(
+            user_id=current_user.id,
+            title=title,
+            description=description,
+            media_type=media_type,
+            media_url=f'/static/uploads/portfolio/{filename}',
+            order=int(order)
+        )
+
+        db.session.add(portfolio_item)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Item creado correctamente',
+            'item': {
+                'id': portfolio_item.id,
+                'title': portfolio_item.title,
+                'description': portfolio_item.description,
+                'media_type': portfolio_item.media_type,
+                'media_url': portfolio_item.media_url,
+                'order': portfolio_item.order
+            }
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error creando item de portfolio: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al crear item'}), 500
+
+
+@bp.route('/api/v1/portfolio/<int:item_id>', methods=['PUT'])
+@login_required
+def update_portfolio_item(item_id):
+    """Actualizar item de portfolio"""
+    try:
+        item = Portfolio.query.filter_by(
+            id=item_id,
+            user_id=current_user.id,
+            deletedAt=None
+        ).first()
+
+        if not item:
+            return jsonify({'error': 'Item no encontrado'}), 404
+
+        data = request.get_json()
+
+        if 'title' in data:
+            item.title = data['title']
+        if 'description' in data:
+            item.description = data['description']
+        if 'order' in data:
+            item.order = int(data['order'])
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Item actualizado correctamente',
+            'item': {
+                'id': item.id,
+                'title': item.title,
+                'description': item.description,
+                'media_type': item.media_type,
+                'media_url': item.media_url,
+                'order': item.order
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error actualizando item: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al actualizar item'}), 500
+
+
+@bp.route('/api/v1/portfolio/<int:item_id>', methods=['DELETE'])
+@login_required
+def delete_portfolio_item(item_id):
+    """Eliminar item de portfolio (soft delete)"""
+    try:
+        from datetime import datetime, timezone
+        item = Portfolio.query.filter_by(
+            id=item_id,
+            user_id=current_user.id,
+            deletedAt=None
+        ).first()
+
+        if not item:
+            return jsonify({'error': 'Item no encontrado'}), 404
+
+        # Soft delete
+        item.deletedAt = datetime.now(timezone.utc)
+        db.session.commit()
+
+        return jsonify({'message': 'Item eliminado correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error eliminando item: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al eliminar item'}), 500

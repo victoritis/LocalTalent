@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 from flask_login import LoginManager
 from flask_cors import CORS
 from flask_mail import Mail
+from flask_socketio import SocketIO
 from app.celery_utils import init_celery
 from redis import Redis
 from app.logger_config import logger
@@ -18,6 +19,7 @@ migrate = Migrate()
 login = LoginManager()
 login.login_message = "Por favor, inicia sesión para acceder a esta página."
 mail = Mail()
+socketio = SocketIO(cors_allowed_origins=["https://localtalent.es", "https://api.localtalent.es"])
 
 # Declaramos la variable celery a nivel de módulo
 celery = None
@@ -31,6 +33,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     mail.init_app(app)
+    socketio.init_app(app)
 
     # --- Importar el módulo de listeners para que se registren ---
     # La simple importación ejecuta el código del decorador @event.listens_for
@@ -58,13 +61,19 @@ def create_app(config_class=Config):
 
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
-    
+
     from app.user import bp as user_bp
     app.register_blueprint(user_bp)
 
+    from app.messaging import bp as messaging_bp
+    app.register_blueprint(messaging_bp)
+
     from app.error import bp as error_bp
     app.register_blueprint(error_bp)
-    
+
+    # Registrar handlers de Socket.IO
+    from app.messaging import socket_handlers
+
     logger.getChild('main').info('Application startup')
 
     return app
