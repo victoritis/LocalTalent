@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MapPin, Users } from 'lucide-react'
+import { Loader2, MapPin, Users, Map as MapIcon, List } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { InteractiveMap } from '@/components/map/InteractiveMap'
 
 export const Route = createLazyFileRoute('/auth/user/map')({
   component: UserMap
@@ -28,6 +30,7 @@ function UserMap() {
   const [users, setUsers] = useState<UserLocation[]>([])
   const [filteredUsers, setFilteredUsers] = useState<UserLocation[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
 
   useEffect(() => {
     fetchUsers()
@@ -82,13 +85,39 @@ function UserMap() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <MapPin className="w-8 h-8" />
-          Mapa de Talento Local
-        </h1>
-        <p className="text-muted-foreground">
-          Descubre talento cerca de ti y conecta con profesionales de todo el mundo
-        </p>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <MapPin className="w-8 h-8" />
+              Mapa de Talento Local
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Descubre talento cerca de ti y conecta con profesionales de todo el mundo
+            </p>
+          </div>
+
+          {/* Toggle de vista */}
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'map' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('map')}
+              className="gap-2"
+            >
+              <MapIcon className="w-4 h-4" />
+              Mapa
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="gap-2"
+            >
+              <List className="w-4 h-4" />
+              Lista
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Estadísticas */}
@@ -137,18 +166,44 @@ function UserMap() {
         </Card>
       </div>
 
-      {/* Búsqueda */}
-      <div className="mb-6">
-        <Input
-          placeholder="Buscar por nombre, ciudad, país o habilidad..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xl"
-        />
-      </div>
+      {/* Búsqueda - Solo en vista de lista */}
+      {viewMode === 'list' && (
+        <div className="mb-6">
+          <Input
+            placeholder="Buscar por nombre, ciudad, país o habilidad..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-xl"
+          />
+        </div>
+      )}
 
-      {/* Lista de usuarios */}
-      {filteredUsers.length === 0 ? (
+      {/* Vista de Mapa */}
+      {viewMode === 'map' && (
+        <>
+          {users.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <MapPin className="w-12 h-12 text-muted-foreground mb-4" />
+                <p className="text-lg text-muted-foreground mb-2">
+                  Aún no hay usuarios con ubicación compartida
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Sé el primero en agregar tu ubicación en{' '}
+                  <Link to="/auth/user/profile" className="text-primary hover:underline">
+                    tu perfil
+                  </Link>
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <InteractiveMap users={users} />
+          )}
+        </>
+      )}
+
+      {/* Vista de Lista */}
+      {viewMode === 'list' && filteredUsers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <MapPin className="w-12 h-12 text-muted-foreground mb-4" />
@@ -168,73 +223,63 @@ function UserMap() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredUsers.map((user) => {
-            const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
+        viewMode === 'list' && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredUsers.map((user) => {
+              const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
 
-            return (
-              <Card key={user.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={user.profile_image} alt={user.username} />
-                      <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">
-                        {user.first_name} {user.last_name}
-                      </CardTitle>
-                      <CardDescription className="truncate">
-                        @{user.username}
-                      </CardDescription>
-                      <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
-                        <MapPin className="w-3 h-3" />
-                        <span className="truncate">
-                          {user.city}, {user.country}
-                        </span>
+              return (
+                <Card key={user.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <Avatar className="w-16 h-16">
+                        <AvatarImage src={user.profile_image} alt={user.username} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg truncate">
+                          {user.first_name} {user.last_name}
+                        </CardTitle>
+                        <CardDescription className="truncate">
+                          @{user.username}
+                        </CardDescription>
+                        <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">
+                            {user.city}, {user.country}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardHeader>
-                {user.skills && user.skills.length > 0 && (
-                  <CardContent>
-                    <div className="flex flex-wrap gap-1">
-                      {user.skills.slice(0, 3).map((skill, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {user.skills.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{user.skills.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                    <Link
-                      to="/auth/user/$username"
-                      params={{ username: user.username }}
-                      className="text-sm text-primary hover:underline mt-3 inline-block"
-                    >
-                      Ver perfil completo →
-                    </Link>
-                  </CardContent>
-                )}
-              </Card>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Nota sobre el mapa interactivo */}
-      {users.length > 0 && (
-        <Card className="mt-8 bg-muted">
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground text-center">
-              💡 <strong>Próximamente:</strong> Vista de mapa interactivo con todos los usuarios y
-              filtros avanzados
-            </p>
-          </CardContent>
-        </Card>
+                  </CardHeader>
+                  {user.skills && user.skills.length > 0 && (
+                    <CardContent>
+                      <div className="flex flex-wrap gap-1">
+                        {user.skills.slice(0, 3).map((skill, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                        {user.skills.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{user.skills.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                      <Link
+                        to="/auth/user/$username"
+                        params={{ username: user.username }}
+                        className="text-sm text-primary hover:underline mt-3 inline-block"
+                      >
+                        Ver perfil completo →
+                      </Link>
+                    </CardContent>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        )
       )}
     </div>
   )
