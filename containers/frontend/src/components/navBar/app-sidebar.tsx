@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Frame, LifeBuoy, Send, Music2 } from "lucide-react";
+import { Frame, LifeBuoy, Send, Music2, User, Map } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { useAuth } from '@/auth';
 import { NavMain } from "@/components/navBar/nav-main";
@@ -68,14 +68,16 @@ const initialUserData: UserData = {
 const staticData: StaticData = {
   user: initialUserData, // Usar los datos iniciales
   navMain: [
-    { title: 'Inicio', url: '/auth/$username/home', icon: Music2 }
+    { title: 'Inicio', url: '/auth/$username/home', icon: Music2 },
+    { title: 'Mapa de Talento', url: '/auth/user/map', icon: Map },
+    { title: 'Mi Perfil', url: '/auth/user/profile', icon: User }
   ],
   navSecondary: [
     { title: "Support", url: "/auth/support", icon: LifeBuoy },
     { title: "Feedback", url: "/auth/feedback", icon: Send }
   ],
   projects: [
-    { name: "Design Engineering", url: "#", icon: Frame } 
+    { name: "Design Engineering", url: "#", icon: Frame }
   ]
 };
 

@@ -193,8 +193,18 @@ class User(Base, UserMixin):
     otp_secret = db.Column(db.String(32), nullable=True)  # Secreto para 2FA
     is_enabled = db.Column(db.Boolean, default=False)  # Habilitado por defecto
     profile_image = db.Column(db.String(255), nullable=True, default='/static/default_profile.png')
-    
-    
+
+    # Campos de perfil
+    bio = db.Column(db.Text, nullable=True)  # Biografía del usuario
+    skills = db.Column(db.ARRAY(db.String), default=[])  # Habilidades/talentos
+
+    # Campos de ubicación
+    address = db.Column(db.String(500), nullable=True)  # Dirección completa
+    city = db.Column(db.String(255), nullable=True)  # Ciudad
+    country = db.Column(db.String(255), nullable=True)  # País
+    latitude = db.Column(db.Float, nullable=True)  # Latitud
+    longitude = db.Column(db.Float, nullable=True)  # Longitud
+
     # Campo de roles especiales (conservado)
     special_roles = db.Column(db.ARRAY(db.String), default=[])
 
