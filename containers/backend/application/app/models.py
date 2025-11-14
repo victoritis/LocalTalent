@@ -74,7 +74,7 @@ def receive_before_update(mapper, connection, target):
 # Función para inicializar los oyentes de los eventos
 def setup_base():
     # Modelos activos (sin organizaciones)
-    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification]:
+    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -172,7 +172,7 @@ def record_audit(mapper, connection, target):
 
 # # Configuración de los oyentes para los modelos (auditoría)
 def setup_audit():
-    for model in [User, Feedback, Portfolio, Message, Conversation, Notification]:
+    for model in [User, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch]:
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -488,6 +488,49 @@ class Notification(Base):
 
     def __repr__(self):
         return f'<Notification {self.id} for user {self.user_id}>'
+
+
+# Review Model
+class Review(Base):
+    __tablename__ = 'review'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien hace la review
+    reviewee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien recibe la review
+    rating = db.Column(db.Integer, nullable=False)  # 1-5 estrellas
+    comment = db.Column(db.Text, nullable=True)  # Comentario/testimonio
+
+    # Relationships
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id], backref='reviews_given')
+    reviewee = db.relationship('User', foreign_keys=[reviewee_id], backref='reviews_received')
+
+    # Constraint: un usuario solo puede hacer una review a otro usuario
+    __table_args__ = (
+        db.UniqueConstraint('reviewer_id', 'reviewee_id', name='unique_review_per_user'),
+        db.CheckConstraint('rating >= 1 AND rating <= 5', name='valid_rating_range'),
+        db.CheckConstraint('reviewer_id != reviewee_id', name='no_self_review')
+    )
+
+    def __repr__(self):
+        return f'<Review {self.id} from {self.reviewer_id} to {self.reviewee_id} - {self.rating} stars>'
+
+
+# SavedSearch Model
+class SavedSearch(Base):
+    __tablename__ = 'saved_search'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)  # Nombre de la búsqueda guardada
+
+    # Parámetros de búsqueda guardados como JSON
+    search_params = db.Column(JSONB, nullable=False)  # {radius, skills, category, sort_by, etc.}
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('saved_searches', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<SavedSearch {self.id} - {self.name} for user {self.user_id}>'
 
 
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos

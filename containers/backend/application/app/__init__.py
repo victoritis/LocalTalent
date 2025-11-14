@@ -71,6 +71,9 @@ def create_app(config_class=Config):
     from app.notifications import bp as notifications_bp
     app.register_blueprint(notifications_bp)
 
+    from app.reviews import bp as reviews_bp
+    app.register_blueprint(reviews_bp)
+
     from app.error import bp as error_bp
     app.register_blueprint(error_bp)
 
