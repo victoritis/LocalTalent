@@ -39,6 +39,53 @@ class TalentCategory(Enum):
     TEACHER = 'teacher'
     OTHER = 'other'
 
+class EventType(Enum):
+    NETWORKING = 'networking'
+    WORKSHOP = 'workshop'
+    MEETUP = 'meetup'
+    CONFERENCE = 'conference'
+    SOCIAL = 'social'
+    COLLABORATION = 'collaboration'
+    OTHER = 'other'
+
+class ProjectStatus(Enum):
+    DRAFT = 'draft'
+    ACTIVE = 'active'
+    COMPLETED = 'completed'
+    CANCELLED = 'cancelled'
+
+class RSVPStatus(Enum):
+    PENDING = 'pending'
+    CONFIRMED = 'confirmed'
+    DECLINED = 'declined'
+    CANCELLED = 'cancelled'
+
+class MemberRole(Enum):
+    OWNER = 'owner'
+    COLLABORATOR = 'collaborator'
+    CONTRIBUTOR = 'contributor'
+
+class MemberStatus(Enum):
+    PENDING = 'pending'
+    ACTIVE = 'active'
+    LEFT = 'left'
+
+class InvitationStatus(Enum):
+    PENDING = 'pending'
+    ACCEPTED = 'accepted'
+    DECLINED = 'declined'
+
+class ReportStatus(Enum):
+    PENDING = 'pending'
+    UNDER_REVIEW = 'under_review'
+    RESOLVED = 'resolved'
+    DISMISSED = 'dismissed'
+
+class VerificationStatus(Enum):
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+
 # Clase base para auditoría
 class Base(db.Model):
     __abstract__ = True  # No se crea una tabla para esta clase directamente
@@ -74,7 +121,9 @@ def receive_before_update(mapper, connection, target):
 # Función para inicializar los oyentes de los eventos
 def setup_base():
     # Modelos activos (sin organizaciones)
-    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch]:
+    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch,
+                  Event, Project, EventRSVP, ProjectMember, EventInvitation, EventMessage,
+                  BlockedUser, Report, VerificationRequest]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -172,7 +221,9 @@ def record_audit(mapper, connection, target):
 
 # # Configuración de los oyentes para los modelos (auditoría)
 def setup_audit():
-    for model in [User, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch]:
+    for model in [User, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch,
+                  Event, Project, EventRSVP, ProjectMember, EventInvitation, EventMessage,
+                  BlockedUser, Report, VerificationRequest]:
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -217,6 +268,12 @@ class User(Base, UserMixin):
     country = db.Column(db.String(255), nullable=True)  # País
     latitude = db.Column(db.Float, nullable=True)  # Latitud
     longitude = db.Column(db.Float, nullable=True)  # Longitud
+
+    # Campos de privacidad y seguridad
+    is_profile_public = db.Column(db.Boolean, default=True, nullable=False)  # Perfil público/privado
+    show_exact_location = db.Column(db.Boolean, default=False, nullable=False)  # Mostrar ubicación exacta o solo ciudad
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)  # Cuenta verificada
+    verification_badge_date = db.Column(db.DateTime, nullable=True)  # Fecha de verificación
 
     # Campo de roles especiales (conservado)
     special_roles = db.Column(db.ARRAY(db.String), default=[])
@@ -531,6 +588,264 @@ class SavedSearch(Base):
 
     def __repr__(self):
         return f'<SavedSearch {self.id} - {self.name} for user {self.user_id}>'
+
+
+# Event Model - Sistema de Eventos/Networking
+class Event(Base):
+    __tablename__ = 'event'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    event_type = db.Column(db.String(50), nullable=False, default='networking')  # networking, workshop, etc.
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Fechas
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=True)
+
+    # Ubicación
+    is_online = db.Column(db.Boolean, default=False, nullable=False)
+    meeting_url = db.Column(db.String(500), nullable=True)  # Para eventos online
+    address = db.Column(db.String(500), nullable=True)
+    city = db.Column(db.String(255), nullable=True)
+    country = db.Column(db.String(255), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
+    # Configuración
+    max_attendees = db.Column(db.Integer, nullable=True)  # null = ilimitado
+    is_public = db.Column(db.Boolean, default=True, nullable=False)
+    category = db.Column(db.String(50), nullable=True)  # Categoría relacionada con TalentCategory
+
+    # Imagen del evento
+    image_url = db.Column(db.String(500), nullable=True)
+
+    # Relationships
+    creator = db.relationship('User', backref=db.backref('created_events', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Event {self.id} - {self.title}>'
+
+
+# Project Model - Sistema de Proyectos Colaborativos
+class Project(Base):
+    __tablename__ = 'project'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Estado y fechas
+    status = db.Column(db.String(50), nullable=False, default='draft')  # draft, active, completed, cancelled
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+
+    # Habilidades requeridas
+    required_skills = db.Column(db.ARRAY(db.String), default=[])
+
+    # Configuración
+    max_members = db.Column(db.Integer, nullable=True)  # null = ilimitado
+    is_public = db.Column(db.Boolean, default=True, nullable=False)
+    category = db.Column(db.String(50), nullable=True)
+
+    # Imagen del proyecto
+    image_url = db.Column(db.String(500), nullable=True)
+
+    # Relationships
+    creator = db.relationship('User', backref=db.backref('created_projects', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Project {self.id} - {self.title}>'
+
+
+# EventRSVP Model - Sistema de confirmaciones de asistencia
+class EventRSVP(Base):
+    __tablename__ = 'event_rsvp'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Estado de confirmación
+    status = db.Column(db.String(50), nullable=False, default='pending')  # pending, confirmed, declined, cancelled
+    response_date = db.Column(db.DateTime, nullable=True)
+
+    # Notas adicionales
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('rsvps', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('event_rsvps', lazy='dynamic'))
+
+    # Constraint: un usuario solo puede tener un RSVP por evento
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='unique_rsvp_per_event'),
+    )
+
+    def __repr__(self):
+        return f'<EventRSVP {self.id} - Event {self.event_id}, User {self.user_id}, Status: {self.status}>'
+
+
+# ProjectMember Model - Miembros de proyectos
+class ProjectMember(Base):
+    __tablename__ = 'project_member'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Rol y estado
+    role = db.Column(db.String(50), nullable=False, default='contributor')  # owner, collaborator, contributor
+    status = db.Column(db.String(50), nullable=False, default='pending')  # pending, active, left
+
+    # Fechas
+    joined_at = db.Column(db.DateTime, nullable=True)
+    left_at = db.Column(db.DateTime, nullable=True)
+
+    # Notas
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    project = db.relationship('Project', backref=db.backref('members', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('project_memberships', lazy='dynamic'))
+
+    # Constraint: un usuario solo puede ser miembro una vez por proyecto
+    __table_args__ = (
+        db.UniqueConstraint('project_id', 'user_id', name='unique_member_per_project'),
+    )
+
+    def __repr__(self):
+        return f'<ProjectMember {self.id} - Project {self.project_id}, User {self.user_id}, Role: {self.role}>'
+
+
+# EventInvitation Model - Invitaciones a eventos
+class EventInvitation(Base):
+    __tablename__ = 'event_invitation'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    invitee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Estado
+    status = db.Column(db.String(50), nullable=False, default='pending')  # pending, accepted, declined
+
+    # Mensaje personalizado
+    message = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('invitations', lazy='dynamic'))
+    inviter = db.relationship('User', foreign_keys=[inviter_id], backref='sent_event_invitations')
+    invitee = db.relationship('User', foreign_keys=[invitee_id], backref='received_event_invitations')
+
+    # Constraint: una sola invitación por usuario por evento
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'invitee_id', name='unique_invitation_per_event'),
+    )
+
+    def __repr__(self):
+        return f'<EventInvitation {self.id} - Event {self.event_id}, Invitee {self.invitee_id}>'
+
+
+# EventMessage Model - Chat grupal por evento
+class EventMessage(Base):
+    __tablename__ = 'event_message'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('messages', lazy='dynamic'))
+    sender = db.relationship('User', backref='sent_event_messages')
+
+    def __repr__(self):
+        return f'<EventMessage {self.id} from {self.sender_id} in Event {self.event_id}>'
+
+
+# BlockedUser Model - Sistema de bloqueo de usuarios
+class BlockedUser(Base):
+    __tablename__ = 'blocked_user'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    blocker_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien bloquea
+    blocked_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien es bloqueado
+    reason = db.Column(db.Text, nullable=True)  # Razón del bloqueo
+
+    # Relationships
+    blocker = db.relationship('User', foreign_keys=[blocker_id], backref='blocked_users')
+    blocked = db.relationship('User', foreign_keys=[blocked_id], backref='blocked_by')
+
+    # Constraint: un usuario solo puede bloquear a otro una vez
+    __table_args__ = (
+        db.UniqueConstraint('blocker_id', 'blocked_id', name='unique_block_per_user'),
+        db.CheckConstraint('blocker_id != blocked_id', name='no_self_block')
+    )
+
+    def __repr__(self):
+        return f'<BlockedUser {self.id} - Blocker {self.blocker_id}, Blocked {self.blocked_id}>'
+
+
+# Report Model - Sistema de reportes de usuarios
+class Report(Base):
+    __tablename__ = 'report'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien reporta
+    reported_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien es reportado
+
+    # Tipo y detalles del reporte
+    reason = db.Column(db.String(100), nullable=False)  # harassment, spam, inappropriate, fake, other
+    description = db.Column(db.Text, nullable=True)
+
+    # Estado del reporte
+    status = db.Column(db.String(50), nullable=False, default='pending')  # pending, under_review, resolved, dismissed
+
+    # Notas del moderador
+    moderator_notes = db.Column(db.Text, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Admin que revisó
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    reporter = db.relationship('User', foreign_keys=[reporter_id], backref='reports_made')
+    reported = db.relationship('User', foreign_keys=[reported_id], backref='reports_received')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by], backref='reports_reviewed')
+
+    def __repr__(self):
+        return f'<Report {self.id} - Reporter {self.reporter_id}, Reported {self.reported_id}, Status: {self.status}>'
+
+
+# VerificationRequest Model - Sistema de verificación de cuentas
+class VerificationRequest(Base):
+    __tablename__ = 'verification_request'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Estado de la solicitud
+    status = db.Column(db.String(50), nullable=False, default='pending')  # pending, approved, rejected
+
+    # Documentación
+    document_url = db.Column(db.String(500), nullable=True)  # URL del documento de verificación
+    document_type = db.Column(db.String(100), nullable=True)  # ID, passport, certificate, etc.
+
+    # Información adicional
+    additional_info = db.Column(db.Text, nullable=True)
+
+    # Revisión
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='verification_requests')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by], backref='verifications_reviewed')
+
+    def __repr__(self):
+        return f'<VerificationRequest {self.id} - User {self.user_id}, Status: {self.status}>'
 
 
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos
