@@ -250,6 +250,7 @@ class User(Base, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=True)  # Username único para perfil público
     password_hash = db.Column(db.String(256), nullable=False)  # Obligatorio
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
