@@ -27,6 +27,18 @@ class AlertSeverity(Enum):
     HIGH = 'high'
     CRITICAL = 'critical'
 
+class TalentCategory(Enum):
+    MUSICIAN = 'musician'
+    ARTIST = 'artist'
+    DEVELOPER = 'developer'
+    DESIGNER = 'designer'
+    PHOTOGRAPHER = 'photographer'
+    WRITER = 'writer'
+    CHEF = 'chef'
+    ATHLETE = 'athlete'
+    TEACHER = 'teacher'
+    OTHER = 'other'
+
 # Clase base para auditoría
 class Base(db.Model):
     __abstract__ = True  # No se crea una tabla para esta clase directamente
@@ -62,7 +74,7 @@ def receive_before_update(mapper, connection, target):
 # Función para inicializar los oyentes de los eventos
 def setup_base():
     # Modelos activos (sin organizaciones)
-    for model in [User, JWTToken, Feedback]:
+    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -160,7 +172,7 @@ def record_audit(mapper, connection, target):
 
 # # Configuración de los oyentes para los modelos (auditoría)
 def setup_audit():
-    for model in [User, Feedback]:  
+    for model in [User, Feedback, Portfolio, Message, Conversation, Notification]:
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -197,6 +209,7 @@ class User(Base, UserMixin):
     # Campos de perfil
     bio = db.Column(db.Text, nullable=True)  # Biografía del usuario
     skills = db.Column(db.ARRAY(db.String), default=[])  # Habilidades/talentos
+    category = db.Column(db.String(50), nullable=True)  # Categoría de talento
 
     # Campos de ubicación
     address = db.Column(db.String(500), nullable=True)  # Dirección completa
@@ -386,11 +399,96 @@ class Feedback(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     message = db.Column(db.Text, nullable=False)
-    is_archived = db.Column(db.Boolean, default=False, nullable=False) 
-    createdAt = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
+    is_archived = db.Column(db.Boolean, default=False, nullable=False)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
         return f'<Feedback {self.id}>'
+
+
+# Portfolio Model
+class Portfolio(Base):
+    __tablename__ = 'portfolio'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    media_type = db.Column(db.String(50), nullable=False)  # 'image' o 'video'
+    media_url = db.Column(db.String(500), nullable=False)  # URL del archivo
+    thumbnail_url = db.Column(db.String(500), nullable=True)  # Thumbnail para videos
+    order = db.Column(db.Integer, default=0)  # Orden de visualización
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('portfolio_items', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Portfolio {self.id} - User {self.user_id}>'
+
+
+# Conversation Model
+class Conversation(Base):
+    __tablename__ = 'conversation'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    participant1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    participant2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    last_message_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    participant1 = db.relationship('User', foreign_keys=[participant1_id], backref='conversations_as_p1')
+    participant2 = db.relationship('User', foreign_keys=[participant2_id], backref='conversations_as_p2')
+
+    # Constraint para evitar conversaciones duplicadas
+    __table_args__ = (
+        db.UniqueConstraint('participant1_id', 'participant2_id', name='unique_conversation'),
+    )
+
+    def __repr__(self):
+        return f'<Conversation {self.id} between {self.participant1_id} and {self.participant2_id}>'
+
+
+# Message Model
+class Message(Base):
+    __tablename__ = 'message'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    conversation = db.relationship('Conversation', backref=db.backref('messages', lazy='dynamic'))
+    sender = db.relationship('User', backref='sent_messages')
+
+    def __repr__(self):
+        return f'<Message {self.id} from {self.sender_id}>'
+
+
+# Notification Model
+class Notification(Base):
+    __tablename__ = 'notification'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # 'message', 'profile_view', 'new_user', etc.
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    link = db.Column(db.String(500), nullable=True)  # URL para ir al contenido
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    # Datos adicionales en JSON (flexible)
+    data = db.Column(JSONB, nullable=True)
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Notification {self.id} for user {self.user_id}>'
+
 
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos
 setup_base()
