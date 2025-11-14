@@ -5,6 +5,7 @@ from app.logger_config import logger
 from app import db
 from app.models import Notification, User
 from datetime import datetime, timezone
+import os
 
 
 @bp.route('/api/v1/notifications', methods=['GET'])
@@ -150,6 +151,132 @@ def delete_notification(notification_id):
         logger.getChild('notifications').error(f"Error eliminando notificación: {str(e)}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500
 
+
+# ========================================
+# WEB PUSH NOTIFICATIONS
+# ========================================
+
+@bp.route('/api/v1/notifications/push/public-key', methods=['GET'])
+def get_vapid_public_key():
+    """Obtener clave pública VAPID para suscripción a push notifications"""
+    try:
+        public_key = os.environ.get('VAPID_PUBLIC_KEY')
+
+        if not public_key:
+            logger.getChild('notifications').error("VAPID_PUBLIC_KEY no configurada")
+            return jsonify({'error': 'Push notifications no disponibles'}), 503
+
+        return jsonify({'public_key': public_key}), 200
+    except Exception as e:
+        logger.getChild('notifications').error(f"Error obteniendo VAPID key: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/notifications/push/subscribe', methods=['POST'])
+@login_required
+def subscribe_to_push():
+    """Suscribirse a web push notifications"""
+    try:
+        data = request.get_json()
+
+        if not data or 'subscription' not in data:
+            return jsonify({'error': 'Datos de suscripción requeridos'}), 400
+
+        subscription = data['subscription']
+
+        # Validar estructura de la suscripción
+        if not all(key in subscription for key in ['endpoint', 'keys']):
+            return jsonify({'error': 'Suscripción inválida'}), 400
+
+        # Guardar suscripción en el usuario
+        current_user.push_subscription = subscription
+        db.session.commit()
+
+        logger.getChild('notifications').info(f"Usuario {current_user.id} suscrito a push notifications")
+
+        return jsonify({'message': 'Suscrito correctamente a notificaciones push'}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('notifications').error(f"Error suscribiendo a push: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/notifications/push/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_from_push():
+    """Cancelar suscripción a web push notifications"""
+    try:
+        current_user.push_subscription = None
+        db.session.commit()
+
+        logger.getChild('notifications').info(f"Usuario {current_user.id} canceló suscripción a push notifications")
+
+        return jsonify({'message': 'Suscripción cancelada'}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('notifications').error(f"Error cancelando suscripción: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/notifications/push/status', methods=['GET'])
+@login_required
+def get_push_subscription_status():
+    """Obtener estado de suscripción a push notifications"""
+    try:
+        is_subscribed = current_user.push_subscription is not None
+
+        return jsonify({
+            'is_subscribed': is_subscribed,
+            'subscription': current_user.push_subscription if is_subscribed else None
+        }), 200
+    except Exception as e:
+        logger.getChild('notifications').error(f"Error obteniendo estado de push: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+# ========================================
+# PREFERENCIAS DE NOTIFICACIONES
+# ========================================
+
+@bp.route('/api/v1/notifications/preferences', methods=['GET'])
+@login_required
+def get_notification_preferences():
+    """Obtener preferencias de notificaciones del usuario"""
+    try:
+        return jsonify({
+            'email_notifications': current_user.email_notifications,
+            'push_notifications': current_user.push_subscription is not None
+        }), 200
+    except Exception as e:
+        logger.getChild('notifications').error(f"Error obteniendo preferencias: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/notifications/preferences', methods=['PUT'])
+@login_required
+def update_notification_preferences():
+    """Actualizar preferencias de notificaciones"""
+    try:
+        data = request.get_json()
+
+        if 'email_notifications' in data:
+            current_user.email_notifications = bool(data['email_notifications'])
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Preferencias actualizadas',
+            'email_notifications': current_user.email_notifications
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('notifications').error(f"Error actualizando preferencias: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+# ========================================
+# FUNCIÓN AUXILIAR
+# ========================================
 
 # Función auxiliar para crear notificaciones (usar en otras partes del código)
 def create_notification(user_id, notification_type, title, message=None, link=None, data=None):
