@@ -41,15 +41,25 @@ def create_or_update_default_admin(flask_app):
                 existing_user.last_name = admin_last_name
                 existing_user.set_password(admin_password)
                 existing_user.is_enabled = True
-                
+
+                # Asegurar que tenga username si no lo tiene
+                if not existing_user.username:
+                    base_username = admin_email.split('@')[0]
+                    username = base_username
+                    counter = 1
+                    while User.query.filter_by(username=username).first():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+                    existing_user.username = username
+
                 if admin_otp_secret:
                     existing_user.otp_secret = admin_otp_secret
-                
-                current_roles = list(existing_user.special_roles) 
+
+                current_roles = list(existing_user.special_roles)
                 if super_admin_role not in current_roles:
                     current_roles.append(super_admin_role)
                     existing_user.special_roles = current_roles
-                
+
                 db.session.commit()
                 log_message = f"Datos del administrador '{admin_email}' actualizados: " \
                               f"nombre='{admin_first_name} {admin_last_name}', contraseña actualizada, habilitado."
@@ -65,13 +75,23 @@ def create_or_update_default_admin(flask_app):
         else:
             # El usuario administrador no existe, crearlo
             try:
+                # Generar username único basado en el email
+                base_username = admin_email.split('@')[0]
+                username = base_username
+                counter = 1
+                # Asegurar que el username sea único
+                while User.query.filter_by(username=username).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
                 new_admin = User(
                     email=admin_email,
+                    username=username,
                     first_name=admin_first_name,
                     last_name=admin_last_name,
                     is_enabled=True,
-                    otp_secret=admin_otp_secret, 
-                    special_roles=[super_admin_role] 
+                    otp_secret=admin_otp_secret,
+                    special_roles=[super_admin_role]
                 )
                 new_admin.set_password(admin_password)
                 db.session.add(new_admin)

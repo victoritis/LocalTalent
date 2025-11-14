@@ -145,9 +145,9 @@ def update_my_profile():
 def get_public_profile(username):
     """Obtener el perfil público de un usuario por su username (vista pública)"""
     try:
-        # Buscar usuario por email que comience con el username
+        # Buscar usuario por username
         user = User.query.filter(
-            User.email.like(f"{username}@%"),
+            User.username == username,
             User.is_enabled == True,
             User.deletedAt.is_(None)
         ).first()

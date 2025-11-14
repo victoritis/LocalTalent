@@ -363,6 +363,18 @@ def register_step1(token):
         user.first_name = first_name
         user.last_name = last_name
         user.set_password(password)
+
+        # Generar username único si no tiene uno
+        if not user.username:
+            base_username = user.email.split('@')[0]
+            username = base_username
+            counter = 1
+            # Asegurar que el username sea único
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{counter}"
+                counter += 1
+            user.username = username
+
         db.session.commit()
 
         logger.getChild('auth').info(f"Registro paso 1 completado exitosamente para usuario: {user.email}")
