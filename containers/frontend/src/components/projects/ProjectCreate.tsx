@@ -87,7 +87,7 @@ export function ProjectCreate() {
       setLoading(true)
       const response = await createProject(formData)
       toast.success('Proyecto creado correctamente')
-      navigate({ to: '/projects/$projectId', params: { projectId: response.project.id.toString() } })
+      navigate({ to: '/auth/projects/$projectId', params: { projectId: response.project.id.toString() } })
     } catch (error: any) {
       console.error('Error creating project:', error)
       toast.error(error.response?.data?.error || 'Error al crear el proyecto')
@@ -301,7 +301,7 @@ export function ProjectCreate() {
               <Button type="submit" className="flex-1" disabled={loading}>
                 {loading ? 'Creando...' : 'Crear Proyecto'}
               </Button>
-              <Button type="button" variant="outline" onClick={() => navigate({ to: '/projects' })} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => navigate({ to: '/auth/projects' })} disabled={loading}>
                 Cancelar
               </Button>
             </div>

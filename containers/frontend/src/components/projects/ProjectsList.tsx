@@ -87,7 +87,7 @@ export function ProjectsList() {
         </div>
       </CardContent>
       <CardFooter>
-        <Link to="/projects/$projectId" params={{ projectId: project.id.toString() }} className="w-full">
+        <Link to="/auth/projects/$projectId" params={{ projectId: project.id.toString() }} className="w-full">
           <Button className="w-full">Ver detalles</Button>
         </Link>
       </CardFooter>
@@ -109,7 +109,7 @@ export function ProjectsList() {
           <h1 className="text-3xl font-bold mb-2">Proyectos Colaborativos</h1>
           <p className="text-gray-600">Encuentra proyectos donde colaborar o crea el tuyo</p>
         </div>
-        <Link to="/projects/create">
+        <Link to="/auth/projects/create">
           <Button>Crear Proyecto</Button>
         </Link>
       </div>

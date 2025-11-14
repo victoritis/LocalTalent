@@ -103,7 +103,7 @@ export function ProjectDetail() {
     try {
       await deleteProject(Number(projectId))
       toast.success('Proyecto eliminado correctamente')
-      navigate({ to: '/projects' })
+      navigate({ to: '/auth/projects' })
     } catch (error: any) {
       console.error('Error deleting project:', error)
       toast.error(error.response?.data?.error || 'Error al eliminar el proyecto')
@@ -187,7 +187,7 @@ export function ProjectDetail() {
                 </div>
                 {isCreator && (
                   <div className="flex gap-2">
-                    <Link to="/projects/$projectId/edit" params={{ projectId: projectId! }}>
+                    <Link to="/auth/projects/$projectId/edit" params={{ projectId: projectId! }}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4 mr-1" />
                         Editar

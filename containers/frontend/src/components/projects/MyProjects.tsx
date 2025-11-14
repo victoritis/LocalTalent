@@ -95,7 +95,7 @@ export function MyProjects() {
             </div>
           )}
         </div>
-        <Link to="/projects/$projectId" params={{ projectId: project.id.toString() }}>
+        <Link to="/auth/projects/$projectId" params={{ projectId: project.id.toString() }}>
           <Button className="w-full mt-4" variant="outline" size="sm">
             Ver Detalles
           </Button>
@@ -135,7 +135,7 @@ export function MyProjects() {
             </div>
           )}
         </div>
-        <Link to="/projects/$projectId" params={{ projectId: invitation.project.id.toString() }}>
+        <Link to="/auth/projects/$projectId" params={{ projectId: invitation.project.id.toString() }}>
           <Button className="w-full" size="sm">
             Ver Invitación
           </Button>
@@ -182,7 +182,7 @@ export function MyProjects() {
               <CardContent className="py-12 text-center">
                 <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 mb-4">Aún no has creado ningún proyecto</p>
-                <Link to="/projects/create">
+                <Link to="/auth/projects/create">
                   <Button>Crear Primer Proyecto</Button>
                 </Link>
               </CardContent>
@@ -203,7 +203,7 @@ export function MyProjects() {
               <CardContent className="py-12 text-center">
                 <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 mb-4">No eres miembro de ningún proyecto</p>
-                <Link to="/projects">
+                <Link to="/auth/projects">
                   <Button>Explorar Proyectos</Button>
                 </Link>
               </CardContent>
