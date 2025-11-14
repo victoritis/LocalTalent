@@ -125,5 +125,7 @@ def add_cors_headers(response):                             #Seguramente haya qu
 
 if __name__ == "__main__":
     basedir = os.path.abspath(os.path.dirname(__file__))
-    socketio.run(app, host="0.0.0.0", port=5000)
+    # En desarrollo, usar debug=True para evitar el error de Werkzeug
+    debug = os.environ.get('FLASK_ENV') == 'development' or os.environ.get('DEBUG', 'False').lower() == 'true'
+    socketio.run(app, host="0.0.0.0", port=5000, debug=debug, allow_unsafe_werkzeug=True)
 
