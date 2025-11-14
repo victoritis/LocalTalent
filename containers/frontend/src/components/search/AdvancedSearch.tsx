@@ -434,7 +434,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
                     variant="outline"
                     size="sm"
                     className="mt-3"
-                    onClick={() => (window.location.href = `/profile/${user.username}`)}
+                    onClick={() => (window.location.href = `/auth/user/${user.username}`)}
                   >
                     Ver perfil
                   </Button>
