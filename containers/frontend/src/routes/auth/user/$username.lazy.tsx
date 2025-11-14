@@ -1,20 +1,23 @@
-import { createLazyFileRoute, Link } from '@tanstack/react-router'
+import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MapPin, Calendar, ArrowLeft, CheckCircle2, Lock } from 'lucide-react'
+import { Loader2, MapPin, Calendar, ArrowLeft, CheckCircle2, Lock, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ReviewList } from '@/components/reviews/ReviewList'
 import { PortfolioGallery } from '@/components/portfolio/PortfolioGallery'
+import { getOrCreateConversation } from '@/services/messaging/messagingApi'
+import { toast } from 'sonner'
 
 export const Route = createLazyFileRoute('/auth/user/$username')({
   component: PublicProfile
 })
 
 interface PublicProfile {
+  id: number
   username: string
   first_name: string
   last_name: string
@@ -37,9 +40,11 @@ interface PublicProfile {
 
 function PublicProfile() {
   const { username } = Route.useParams()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -66,6 +71,25 @@ function PublicProfile() {
       setError('Error al cargar el perfil')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!profile?.id) return
+
+    try {
+      setSendingMessage(true)
+      const result = await getOrCreateConversation(profile.id)
+
+      toast.success('Redirigiendo a mensajes...')
+
+      // Navegar a la página de mensajes
+      navigate({ to: '/auth/messages' })
+    } catch (error) {
+      console.error('Error al crear conversación:', error)
+      toast.error('No se pudo iniciar la conversación')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -148,13 +172,25 @@ function PublicProfile() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Link to="/auth/home">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver
           </Button>
         </Link>
+        <Button
+          onClick={handleSendMessage}
+          disabled={sendingMessage}
+          size="sm"
+        >
+          {sendingMessage ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <MessageCircle className="w-4 h-4 mr-2" />
+          )}
+          Enviar mensaje
+        </Button>
       </div>
 
       <Card>
