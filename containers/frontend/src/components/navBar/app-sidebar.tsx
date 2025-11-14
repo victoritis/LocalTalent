@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Frame, LifeBuoy, Send, Music2, User, Map, Calendar, FolderKanban, MessageSquare, Search } from "lucide-react";
+import { Frame, LifeBuoy, Send, Music2, User, Map, Calendar, FolderKanban, MessageSquare, Search, Settings, Bell, Shield } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { useAuth } from '@/auth';
 import { NavMain } from "@/components/navBar/nav-main";
@@ -92,7 +92,16 @@ const staticData: StaticData = {
     },
     { title: 'Mensajes', url: '/auth/messages', icon: MessageSquare },
     { title: 'Búsqueda Avanzada', url: '/auth/search', icon: Search },
-    { title: 'Mi Perfil', url: '/auth/user/profile', icon: User }
+    { title: 'Mi Perfil', url: '/auth/user/profile', icon: User },
+    {
+      title: 'Configuración',
+      url: '/auth/settings',
+      icon: Settings,
+      items: [
+        { title: 'Notificaciones', url: '/auth/settings/notifications' },
+        { title: 'Privacidad y Seguridad', url: '/auth/settings/privacy' }
+      ]
+    }
   ],
   navSecondary: [
     { title: "Support", url: "/auth/support", icon: LifeBuoy },

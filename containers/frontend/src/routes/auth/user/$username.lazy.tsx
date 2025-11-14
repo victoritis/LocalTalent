@@ -7,6 +7,8 @@ import { Loader2, MapPin, Calendar, ArrowLeft, CheckCircle2, Lock } from 'lucide
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { ReviewList } from '@/components/reviews/ReviewList'
+import { PortfolioGallery } from '@/components/portfolio/PortfolioGallery'
 
 export const Route = createLazyFileRoute('/auth/user/$username')({
   component: PublicProfile
@@ -227,6 +229,32 @@ function PublicProfile() {
           )}
         </CardContent>
       </Card>
+
+      {/* Portfolio Section */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Portfolio</CardTitle>
+            <CardDescription>Trabajos y proyectos de {profile.first_name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PortfolioGallery username={username} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Valoraciones</CardTitle>
+            <CardDescription>Lo que otros dicen sobre {profile.first_name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReviewList username={username} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
