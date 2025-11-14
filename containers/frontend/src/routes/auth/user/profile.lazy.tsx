@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Camera, MapPin, Plus, X } from 'lucide-react'
 import { LocationSelector } from '@/components/profile/LocationSelector'
+import { AddPortfolioItem } from '@/components/portfolio/AddPortfolioItem'
+import { PortfolioGallery } from '@/components/portfolio/PortfolioGallery'
 
 export const Route = createLazyFileRoute('/auth/user/profile')({
   component: MyProfile
@@ -387,6 +389,24 @@ function MyProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Portfolio Section */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Mi Portfolio</CardTitle>
+                <CardDescription>Muestra tus trabajos y proyectos</CardDescription>
+              </div>
+              <AddPortfolioItem onPortfolioUpdated={fetchProfile} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <PortfolioGallery username={profile.username} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

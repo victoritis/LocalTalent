@@ -17,6 +17,9 @@ import { Route as LoginImport } from './routes/login'
 import { Route as AuthImport } from './routes/auth'
 import { Route as LoginIndexRouteImport } from './routes/login/index.route'
 import { Route as AuthUserImport } from './routes/auth/user'
+import { Route as AuthSettingsImport } from './routes/auth/settings'
+import { Route as AuthProjectsImport } from './routes/auth/projects'
+import { Route as AuthEventsImport } from './routes/auth/events'
 import { Route as AuthSuperadminDashboardImport } from './routes/auth/superadmin/dashboard'
 
 // Create Virtual Routes
@@ -30,11 +33,27 @@ const LoginRecoverPasswordLazyImport = createFileRoute(
   '/login/recover-password',
 )()
 const AuthSupportLazyImport = createFileRoute('/auth/support')()
+const AuthSearchLazyImport = createFileRoute('/auth/search')()
+const AuthMessagesLazyImport = createFileRoute('/auth/messages')()
 const AuthHomeLazyImport = createFileRoute('/auth/home')()
 const AuthFeedbackLazyImport = createFileRoute('/auth/feedback')()
+const AuthProjectsIndexLazyImport = createFileRoute('/auth/projects/')()
+const AuthEventsIndexLazyImport = createFileRoute('/auth/events/')()
 const AuthUserProfileLazyImport = createFileRoute('/auth/user/profile')()
 const AuthUserMapLazyImport = createFileRoute('/auth/user/map')()
 const AuthUserUsernameLazyImport = createFileRoute('/auth/user/$username')()
+const AuthSettingsPrivacyLazyImport = createFileRoute(
+  '/auth/settings/privacy',
+)()
+const AuthSettingsNotificationsLazyImport = createFileRoute(
+  '/auth/settings/notifications',
+)()
+const AuthProjectsMyLazyImport = createFileRoute('/auth/projects/my')()
+const AuthProjectsCreateLazyImport = createFileRoute('/auth/projects/create')()
+const AuthProjectsIdLazyImport = createFileRoute('/auth/projects/$id')()
+const AuthEventsMyLazyImport = createFileRoute('/auth/events/my')()
+const AuthEventsCreateLazyImport = createFileRoute('/auth/events/create')()
+const AuthEventsIdLazyImport = createFileRoute('/auth/events/$id')()
 
 // Create/Update Routes
 
@@ -92,6 +111,18 @@ const AuthSupportLazyRoute = AuthSupportLazyImport.update({
   getParentRoute: () => AuthRoute,
 } as any).lazy(() => import('./routes/auth/support.lazy').then((d) => d.Route))
 
+const AuthSearchLazyRoute = AuthSearchLazyImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AuthRoute,
+} as any).lazy(() => import('./routes/auth/search.lazy').then((d) => d.Route))
+
+const AuthMessagesLazyRoute = AuthMessagesLazyImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AuthRoute,
+} as any).lazy(() => import('./routes/auth/messages.lazy').then((d) => d.Route))
+
 const AuthHomeLazyRoute = AuthHomeLazyImport.update({
   id: '/home',
   path: '/home',
@@ -109,6 +140,40 @@ const AuthUserRoute = AuthUserImport.update({
   path: '/user',
   getParentRoute: () => AuthRoute,
 } as any)
+
+const AuthSettingsRoute = AuthSettingsImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthRoute,
+} as any)
+
+const AuthProjectsRoute = AuthProjectsImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AuthRoute,
+} as any)
+
+const AuthEventsRoute = AuthEventsImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AuthRoute,
+} as any)
+
+const AuthProjectsIndexLazyRoute = AuthProjectsIndexLazyImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthProjectsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/projects/index.lazy').then((d) => d.Route),
+)
+
+const AuthEventsIndexLazyRoute = AuthEventsIndexLazyImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthEventsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/events/index.lazy').then((d) => d.Route),
+)
 
 const AuthUserProfileLazyRoute = AuthUserProfileLazyImport.update({
   id: '/profile',
@@ -130,6 +195,71 @@ const AuthUserUsernameLazyRoute = AuthUserUsernameLazyImport.update({
   getParentRoute: () => AuthUserRoute,
 } as any).lazy(() =>
   import('./routes/auth/user/$username.lazy').then((d) => d.Route),
+)
+
+const AuthSettingsPrivacyLazyRoute = AuthSettingsPrivacyLazyImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AuthSettingsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/settings/privacy.lazy').then((d) => d.Route),
+)
+
+const AuthSettingsNotificationsLazyRoute =
+  AuthSettingsNotificationsLazyImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthSettingsRoute,
+  } as any).lazy(() =>
+    import('./routes/auth/settings/notifications.lazy').then((d) => d.Route),
+  )
+
+const AuthProjectsMyLazyRoute = AuthProjectsMyLazyImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => AuthProjectsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/projects/my.lazy').then((d) => d.Route),
+)
+
+const AuthProjectsCreateLazyRoute = AuthProjectsCreateLazyImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => AuthProjectsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/projects/create.lazy').then((d) => d.Route),
+)
+
+const AuthProjectsIdLazyRoute = AuthProjectsIdLazyImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthProjectsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/projects/$id.lazy').then((d) => d.Route),
+)
+
+const AuthEventsMyLazyRoute = AuthEventsMyLazyImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => AuthEventsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/events/my.lazy').then((d) => d.Route),
+)
+
+const AuthEventsCreateLazyRoute = AuthEventsCreateLazyImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => AuthEventsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/events/create.lazy').then((d) => d.Route),
+)
+
+const AuthEventsIdLazyRoute = AuthEventsIdLazyImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthEventsRoute,
+} as any).lazy(() =>
+  import('./routes/auth/events/$id.lazy').then((d) => d.Route),
 )
 
 const AuthSuperadminDashboardRoute = AuthSuperadminDashboardImport.update({
@@ -163,6 +293,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
     }
+    '/auth/events': {
+      id: '/auth/events'
+      path: '/events'
+      fullPath: '/auth/events'
+      preLoaderRoute: typeof AuthEventsImport
+      parentRoute: typeof AuthImport
+    }
+    '/auth/projects': {
+      id: '/auth/projects'
+      path: '/projects'
+      fullPath: '/auth/projects'
+      preLoaderRoute: typeof AuthProjectsImport
+      parentRoute: typeof AuthImport
+    }
+    '/auth/settings': {
+      id: '/auth/settings'
+      path: '/settings'
+      fullPath: '/auth/settings'
+      preLoaderRoute: typeof AuthSettingsImport
+      parentRoute: typeof AuthImport
+    }
     '/auth/user': {
       id: '/auth/user'
       path: '/user'
@@ -182,6 +333,20 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/auth/home'
       preLoaderRoute: typeof AuthHomeLazyImport
+      parentRoute: typeof AuthImport
+    }
+    '/auth/messages': {
+      id: '/auth/messages'
+      path: '/messages'
+      fullPath: '/auth/messages'
+      preLoaderRoute: typeof AuthMessagesLazyImport
+      parentRoute: typeof AuthImport
+    }
+    '/auth/search': {
+      id: '/auth/search'
+      path: '/search'
+      fullPath: '/auth/search'
+      preLoaderRoute: typeof AuthSearchLazyImport
       parentRoute: typeof AuthImport
     }
     '/auth/support': {
@@ -226,6 +391,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSuperadminDashboardImport
       parentRoute: typeof AuthImport
     }
+    '/auth/events/$id': {
+      id: '/auth/events/$id'
+      path: '/$id'
+      fullPath: '/auth/events/$id'
+      preLoaderRoute: typeof AuthEventsIdLazyImport
+      parentRoute: typeof AuthEventsImport
+    }
+    '/auth/events/create': {
+      id: '/auth/events/create'
+      path: '/create'
+      fullPath: '/auth/events/create'
+      preLoaderRoute: typeof AuthEventsCreateLazyImport
+      parentRoute: typeof AuthEventsImport
+    }
+    '/auth/events/my': {
+      id: '/auth/events/my'
+      path: '/my'
+      fullPath: '/auth/events/my'
+      preLoaderRoute: typeof AuthEventsMyLazyImport
+      parentRoute: typeof AuthEventsImport
+    }
+    '/auth/projects/$id': {
+      id: '/auth/projects/$id'
+      path: '/$id'
+      fullPath: '/auth/projects/$id'
+      preLoaderRoute: typeof AuthProjectsIdLazyImport
+      parentRoute: typeof AuthProjectsImport
+    }
+    '/auth/projects/create': {
+      id: '/auth/projects/create'
+      path: '/create'
+      fullPath: '/auth/projects/create'
+      preLoaderRoute: typeof AuthProjectsCreateLazyImport
+      parentRoute: typeof AuthProjectsImport
+    }
+    '/auth/projects/my': {
+      id: '/auth/projects/my'
+      path: '/my'
+      fullPath: '/auth/projects/my'
+      preLoaderRoute: typeof AuthProjectsMyLazyImport
+      parentRoute: typeof AuthProjectsImport
+    }
+    '/auth/settings/notifications': {
+      id: '/auth/settings/notifications'
+      path: '/notifications'
+      fullPath: '/auth/settings/notifications'
+      preLoaderRoute: typeof AuthSettingsNotificationsLazyImport
+      parentRoute: typeof AuthSettingsImport
+    }
+    '/auth/settings/privacy': {
+      id: '/auth/settings/privacy'
+      path: '/privacy'
+      fullPath: '/auth/settings/privacy'
+      preLoaderRoute: typeof AuthSettingsPrivacyLazyImport
+      parentRoute: typeof AuthSettingsImport
+    }
     '/auth/user/$username': {
       id: '/auth/user/$username'
       path: '/$username'
@@ -247,10 +468,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthUserProfileLazyImport
       parentRoute: typeof AuthUserImport
     }
+    '/auth/events/': {
+      id: '/auth/events/'
+      path: '/'
+      fullPath: '/auth/events/'
+      preLoaderRoute: typeof AuthEventsIndexLazyImport
+      parentRoute: typeof AuthEventsImport
+    }
+    '/auth/projects/': {
+      id: '/auth/projects/'
+      path: '/'
+      fullPath: '/auth/projects/'
+      preLoaderRoute: typeof AuthProjectsIndexLazyImport
+      parentRoute: typeof AuthProjectsImport
+    }
   }
 }
 
 // Create and export the route tree
+
+interface AuthEventsRouteChildren {
+  AuthEventsIdLazyRoute: typeof AuthEventsIdLazyRoute
+  AuthEventsCreateLazyRoute: typeof AuthEventsCreateLazyRoute
+  AuthEventsMyLazyRoute: typeof AuthEventsMyLazyRoute
+  AuthEventsIndexLazyRoute: typeof AuthEventsIndexLazyRoute
+}
+
+const AuthEventsRouteChildren: AuthEventsRouteChildren = {
+  AuthEventsIdLazyRoute: AuthEventsIdLazyRoute,
+  AuthEventsCreateLazyRoute: AuthEventsCreateLazyRoute,
+  AuthEventsMyLazyRoute: AuthEventsMyLazyRoute,
+  AuthEventsIndexLazyRoute: AuthEventsIndexLazyRoute,
+}
+
+const AuthEventsRouteWithChildren = AuthEventsRoute._addFileChildren(
+  AuthEventsRouteChildren,
+)
+
+interface AuthProjectsRouteChildren {
+  AuthProjectsIdLazyRoute: typeof AuthProjectsIdLazyRoute
+  AuthProjectsCreateLazyRoute: typeof AuthProjectsCreateLazyRoute
+  AuthProjectsMyLazyRoute: typeof AuthProjectsMyLazyRoute
+  AuthProjectsIndexLazyRoute: typeof AuthProjectsIndexLazyRoute
+}
+
+const AuthProjectsRouteChildren: AuthProjectsRouteChildren = {
+  AuthProjectsIdLazyRoute: AuthProjectsIdLazyRoute,
+  AuthProjectsCreateLazyRoute: AuthProjectsCreateLazyRoute,
+  AuthProjectsMyLazyRoute: AuthProjectsMyLazyRoute,
+  AuthProjectsIndexLazyRoute: AuthProjectsIndexLazyRoute,
+}
+
+const AuthProjectsRouteWithChildren = AuthProjectsRoute._addFileChildren(
+  AuthProjectsRouteChildren,
+)
+
+interface AuthSettingsRouteChildren {
+  AuthSettingsNotificationsLazyRoute: typeof AuthSettingsNotificationsLazyRoute
+  AuthSettingsPrivacyLazyRoute: typeof AuthSettingsPrivacyLazyRoute
+}
+
+const AuthSettingsRouteChildren: AuthSettingsRouteChildren = {
+  AuthSettingsNotificationsLazyRoute: AuthSettingsNotificationsLazyRoute,
+  AuthSettingsPrivacyLazyRoute: AuthSettingsPrivacyLazyRoute,
+}
+
+const AuthSettingsRouteWithChildren = AuthSettingsRoute._addFileChildren(
+  AuthSettingsRouteChildren,
+)
 
 interface AuthUserRouteChildren {
   AuthUserUsernameLazyRoute: typeof AuthUserUsernameLazyRoute
@@ -269,17 +554,27 @@ const AuthUserRouteWithChildren = AuthUserRoute._addFileChildren(
 )
 
 interface AuthRouteChildren {
+  AuthEventsRoute: typeof AuthEventsRouteWithChildren
+  AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
+  AuthSettingsRoute: typeof AuthSettingsRouteWithChildren
   AuthUserRoute: typeof AuthUserRouteWithChildren
   AuthFeedbackLazyRoute: typeof AuthFeedbackLazyRoute
   AuthHomeLazyRoute: typeof AuthHomeLazyRoute
+  AuthMessagesLazyRoute: typeof AuthMessagesLazyRoute
+  AuthSearchLazyRoute: typeof AuthSearchLazyRoute
   AuthSupportLazyRoute: typeof AuthSupportLazyRoute
   AuthSuperadminDashboardRoute: typeof AuthSuperadminDashboardRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthEventsRoute: AuthEventsRouteWithChildren,
+  AuthProjectsRoute: AuthProjectsRouteWithChildren,
+  AuthSettingsRoute: AuthSettingsRouteWithChildren,
   AuthUserRoute: AuthUserRouteWithChildren,
   AuthFeedbackLazyRoute: AuthFeedbackLazyRoute,
   AuthHomeLazyRoute: AuthHomeLazyRoute,
+  AuthMessagesLazyRoute: AuthMessagesLazyRoute,
+  AuthSearchLazyRoute: AuthSearchLazyRoute,
   AuthSupportLazyRoute: AuthSupportLazyRoute,
   AuthSuperadminDashboardRoute: AuthSuperadminDashboardRoute,
 }
@@ -304,35 +599,63 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
+  '/auth/events': typeof AuthEventsRouteWithChildren
+  '/auth/projects': typeof AuthProjectsRouteWithChildren
+  '/auth/settings': typeof AuthSettingsRouteWithChildren
   '/auth/user': typeof AuthUserRouteWithChildren
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
+  '/auth/messages': typeof AuthMessagesLazyRoute
+  '/auth/search': typeof AuthSearchLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
+  '/auth/events/$id': typeof AuthEventsIdLazyRoute
+  '/auth/events/create': typeof AuthEventsCreateLazyRoute
+  '/auth/events/my': typeof AuthEventsMyLazyRoute
+  '/auth/projects/$id': typeof AuthProjectsIdLazyRoute
+  '/auth/projects/create': typeof AuthProjectsCreateLazyRoute
+  '/auth/projects/my': typeof AuthProjectsMyLazyRoute
+  '/auth/settings/notifications': typeof AuthSettingsNotificationsLazyRoute
+  '/auth/settings/privacy': typeof AuthSettingsPrivacyLazyRoute
   '/auth/user/$username': typeof AuthUserUsernameLazyRoute
   '/auth/user/map': typeof AuthUserMapLazyRoute
   '/auth/user/profile': typeof AuthUserProfileLazyRoute
+  '/auth/events/': typeof AuthEventsIndexLazyRoute
+  '/auth/projects/': typeof AuthProjectsIndexLazyRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
+  '/auth/settings': typeof AuthSettingsRouteWithChildren
   '/auth/user': typeof AuthUserRouteWithChildren
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
+  '/auth/messages': typeof AuthMessagesLazyRoute
+  '/auth/search': typeof AuthSearchLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
+  '/auth/events/$id': typeof AuthEventsIdLazyRoute
+  '/auth/events/create': typeof AuthEventsCreateLazyRoute
+  '/auth/events/my': typeof AuthEventsMyLazyRoute
+  '/auth/projects/$id': typeof AuthProjectsIdLazyRoute
+  '/auth/projects/create': typeof AuthProjectsCreateLazyRoute
+  '/auth/projects/my': typeof AuthProjectsMyLazyRoute
+  '/auth/settings/notifications': typeof AuthSettingsNotificationsLazyRoute
+  '/auth/settings/privacy': typeof AuthSettingsPrivacyLazyRoute
   '/auth/user/$username': typeof AuthUserUsernameLazyRoute
   '/auth/user/map': typeof AuthUserMapLazyRoute
   '/auth/user/profile': typeof AuthUserProfileLazyRoute
+  '/auth/events': typeof AuthEventsIndexLazyRoute
+  '/auth/projects': typeof AuthProjectsIndexLazyRoute
 }
 
 export interface FileRoutesById {
@@ -340,18 +663,33 @@ export interface FileRoutesById {
   '/': typeof IndexLazyRoute
   '/auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRouteWithChildren
+  '/auth/events': typeof AuthEventsRouteWithChildren
+  '/auth/projects': typeof AuthProjectsRouteWithChildren
+  '/auth/settings': typeof AuthSettingsRouteWithChildren
   '/auth/user': typeof AuthUserRouteWithChildren
   '/auth/feedback': typeof AuthFeedbackLazyRoute
   '/auth/home': typeof AuthHomeLazyRoute
+  '/auth/messages': typeof AuthMessagesLazyRoute
+  '/auth/search': typeof AuthSearchLazyRoute
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
+  '/auth/events/$id': typeof AuthEventsIdLazyRoute
+  '/auth/events/create': typeof AuthEventsCreateLazyRoute
+  '/auth/events/my': typeof AuthEventsMyLazyRoute
+  '/auth/projects/$id': typeof AuthProjectsIdLazyRoute
+  '/auth/projects/create': typeof AuthProjectsCreateLazyRoute
+  '/auth/projects/my': typeof AuthProjectsMyLazyRoute
+  '/auth/settings/notifications': typeof AuthSettingsNotificationsLazyRoute
+  '/auth/settings/privacy': typeof AuthSettingsPrivacyLazyRoute
   '/auth/user/$username': typeof AuthUserUsernameLazyRoute
   '/auth/user/map': typeof AuthUserMapLazyRoute
   '/auth/user/profile': typeof AuthUserProfileLazyRoute
+  '/auth/events/': typeof AuthEventsIndexLazyRoute
+  '/auth/projects/': typeof AuthProjectsIndexLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -360,51 +698,94 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/login'
+    | '/auth/events'
+    | '/auth/projects'
+    | '/auth/settings'
     | '/auth/user'
     | '/auth/feedback'
     | '/auth/home'
+    | '/auth/messages'
+    | '/auth/search'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
+    | '/auth/events/$id'
+    | '/auth/events/create'
+    | '/auth/events/my'
+    | '/auth/projects/$id'
+    | '/auth/projects/create'
+    | '/auth/projects/my'
+    | '/auth/settings/notifications'
+    | '/auth/settings/privacy'
     | '/auth/user/$username'
     | '/auth/user/map'
     | '/auth/user/profile'
+    | '/auth/events/'
+    | '/auth/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/auth/settings'
     | '/auth/user'
     | '/auth/feedback'
     | '/auth/home'
+    | '/auth/messages'
+    | '/auth/search'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
     | '/register/create-account'
     | '/login'
     | '/auth/superadmin/dashboard'
+    | '/auth/events/$id'
+    | '/auth/events/create'
+    | '/auth/events/my'
+    | '/auth/projects/$id'
+    | '/auth/projects/create'
+    | '/auth/projects/my'
+    | '/auth/settings/notifications'
+    | '/auth/settings/privacy'
     | '/auth/user/$username'
     | '/auth/user/map'
     | '/auth/user/profile'
+    | '/auth/events'
+    | '/auth/projects'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/login'
+    | '/auth/events'
+    | '/auth/projects'
+    | '/auth/settings'
     | '/auth/user'
     | '/auth/feedback'
     | '/auth/home'
+    | '/auth/messages'
+    | '/auth/search'
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
+    | '/auth/events/$id'
+    | '/auth/events/create'
+    | '/auth/events/my'
+    | '/auth/projects/$id'
+    | '/auth/projects/create'
+    | '/auth/projects/my'
+    | '/auth/settings/notifications'
+    | '/auth/settings/privacy'
     | '/auth/user/$username'
     | '/auth/user/map'
     | '/auth/user/profile'
+    | '/auth/events/'
+    | '/auth/projects/'
   fileRoutesById: FileRoutesById
 }
 
@@ -444,9 +825,14 @@ export const routeTree = rootRoute
     "/auth": {
       "filePath": "auth.tsx",
       "children": [
+        "/auth/events",
+        "/auth/projects",
+        "/auth/settings",
         "/auth/user",
         "/auth/feedback",
         "/auth/home",
+        "/auth/messages",
+        "/auth/search",
         "/auth/support",
         "/auth/superadmin/dashboard"
       ]
@@ -457,6 +843,34 @@ export const routeTree = rootRoute
         "/login/recover-password",
         "/login/reset-password",
         "/login/"
+      ]
+    },
+    "/auth/events": {
+      "filePath": "auth/events.tsx",
+      "parent": "/auth",
+      "children": [
+        "/auth/events/$id",
+        "/auth/events/create",
+        "/auth/events/my",
+        "/auth/events/"
+      ]
+    },
+    "/auth/projects": {
+      "filePath": "auth/projects.tsx",
+      "parent": "/auth",
+      "children": [
+        "/auth/projects/$id",
+        "/auth/projects/create",
+        "/auth/projects/my",
+        "/auth/projects/"
+      ]
+    },
+    "/auth/settings": {
+      "filePath": "auth/settings.tsx",
+      "parent": "/auth",
+      "children": [
+        "/auth/settings/notifications",
+        "/auth/settings/privacy"
       ]
     },
     "/auth/user": {
@@ -474,6 +888,14 @@ export const routeTree = rootRoute
     },
     "/auth/home": {
       "filePath": "auth/home.lazy.tsx",
+      "parent": "/auth"
+    },
+    "/auth/messages": {
+      "filePath": "auth/messages.lazy.tsx",
+      "parent": "/auth"
+    },
+    "/auth/search": {
+      "filePath": "auth/search.lazy.tsx",
       "parent": "/auth"
     },
     "/auth/support": {
@@ -499,6 +921,38 @@ export const routeTree = rootRoute
       "filePath": "auth/superadmin/dashboard.tsx",
       "parent": "/auth"
     },
+    "/auth/events/$id": {
+      "filePath": "auth/events/$id.lazy.tsx",
+      "parent": "/auth/events"
+    },
+    "/auth/events/create": {
+      "filePath": "auth/events/create.lazy.tsx",
+      "parent": "/auth/events"
+    },
+    "/auth/events/my": {
+      "filePath": "auth/events/my.lazy.tsx",
+      "parent": "/auth/events"
+    },
+    "/auth/projects/$id": {
+      "filePath": "auth/projects/$id.lazy.tsx",
+      "parent": "/auth/projects"
+    },
+    "/auth/projects/create": {
+      "filePath": "auth/projects/create.lazy.tsx",
+      "parent": "/auth/projects"
+    },
+    "/auth/projects/my": {
+      "filePath": "auth/projects/my.lazy.tsx",
+      "parent": "/auth/projects"
+    },
+    "/auth/settings/notifications": {
+      "filePath": "auth/settings/notifications.lazy.tsx",
+      "parent": "/auth/settings"
+    },
+    "/auth/settings/privacy": {
+      "filePath": "auth/settings/privacy.lazy.tsx",
+      "parent": "/auth/settings"
+    },
     "/auth/user/$username": {
       "filePath": "auth/user/$username.lazy.tsx",
       "parent": "/auth/user"
@@ -510,6 +964,14 @@ export const routeTree = rootRoute
     "/auth/user/profile": {
       "filePath": "auth/user/profile.lazy.tsx",
       "parent": "/auth/user"
+    },
+    "/auth/events/": {
+      "filePath": "auth/events/index.lazy.tsx",
+      "parent": "/auth/events"
+    },
+    "/auth/projects/": {
+      "filePath": "auth/projects/index.lazy.tsx",
+      "parent": "/auth/projects"
     }
   }
 }
