@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
+import { Loader2, MapPin, Calendar, ArrowLeft, CheckCircle2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -19,8 +19,17 @@ interface PublicProfile {
   profile_image: string
   bio: string | null
   skills: string[]
-  city: string | null
-  country: string | null
+  category: string | null
+  is_verified: boolean
+  is_private?: boolean
+  location?: {
+    city: string | null
+    country: string | null
+    latitude?: number
+    longitude?: number
+  }
+  city?: string | null  // For backward compatibility
+  country?: string | null  // For backward compatibility
   created_at: string
 }
 
@@ -89,6 +98,52 @@ function PublicProfile() {
     ? format(new Date(profile.created_at), "MMMM yyyy", { locale: es })
     : 'Desconocido'
 
+  // Handle both location object and direct city/country fields
+  const city = profile.location?.city || profile.city
+  const country = profile.location?.country || profile.country
+
+  // Handle private profile
+  if (profile.is_private) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="mb-4">
+          <Link to="/auth/home">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
+          </Link>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-6">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={profile.profile_image} alt={profile.username} />
+                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-3xl">
+                    {profile.first_name} {profile.last_name}
+                  </CardTitle>
+                  {profile.is_verified && (
+                    <CheckCircle2 className="w-6 h-6 text-blue-500" />
+                  )}
+                </div>
+                <CardDescription className="text-base">@{profile.username}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-lg text-muted-foreground">Este perfil es privado</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-4">
@@ -108,18 +163,23 @@ function PublicProfile() {
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <CardTitle className="text-3xl mb-2">
-                {profile.first_name} {profile.last_name}
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-3xl">
+                  {profile.first_name} {profile.last_name}
+                </CardTitle>
+                {profile.is_verified && (
+                  <CheckCircle2 className="w-6 h-6 text-blue-500" />
+                )}
+              </div>
               <CardDescription className="text-base">@{profile.username}</CardDescription>
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                {(profile.city || profile.country) && (
+                {(city || country) && (
                   <div className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
                     <span>
-                      {profile.city && profile.country
-                        ? `${profile.city}, ${profile.country}`
-                        : profile.city || profile.country}
+                      {city && country
+                        ? `${city}, ${country}`
+                        : city || country}
                     </span>
                   </div>
                 )}
@@ -128,6 +188,11 @@ function PublicProfile() {
                   <span>Miembro desde {memberSince}</span>
                 </div>
               </div>
+              {profile.category && (
+                <div className="mt-2">
+                  <Badge variant="outline">{profile.category}</Badge>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
