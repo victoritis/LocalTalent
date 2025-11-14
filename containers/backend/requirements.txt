@@ -20,3 +20,5 @@ requests
 flask-socketio
 python-socketio
 flask-limiter
+py-vapid
+pywebpush

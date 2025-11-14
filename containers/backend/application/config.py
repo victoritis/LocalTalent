@@ -49,7 +49,7 @@ class Config:
     ############################################################################################################
     # Configuración de Celery
     ############################################################################################################
-    
+
     REDIS_URL = os.environ.get('REDIS_URL')
 
     ############################################################################################################
@@ -64,6 +64,25 @@ class Config:
     #Deberia ir task_route en vez de CELERY_ROUTES pero parece no funcionar
     #Para indicar en tareas periódicas a qué cola ir
     CELERY_ROUTES = {}
+
+    # Tareas periódicas de Celery Beat
+    from datetime import timedelta
+    from celery.schedules import crontab
+
+    beat_schedule = {
+        'send-new-users-alerts-daily': {
+            'task': 'email_tasks.send_new_users_alerts',
+            'schedule': timedelta(days=1),  # Cada día
+        },
+        'send-event-reminders-hourly': {
+            'task': 'email_tasks.send_event_reminders',
+            'schedule': timedelta(hours=1),  # Cada hora
+        },
+        'send-weekly-digests': {
+            'task': 'email_tasks.send_weekly_digests',
+            'schedule': crontab(day_of_week=1, hour=9, minute=0),  # Lunes a las 9:00 AM
+        },
+    }
     
     ############################################################################################################
     # Configuración de API NVD

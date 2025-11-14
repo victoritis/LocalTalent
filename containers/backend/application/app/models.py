@@ -275,6 +275,10 @@ class User(Base, UserMixin):
     is_verified = db.Column(db.Boolean, default=False, nullable=False)  # Cuenta verificada
     verification_badge_date = db.Column(db.DateTime, nullable=True)  # Fecha de verificación
 
+    # Campos de notificaciones
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Notificaciones por email habilitadas
+    push_subscription = db.Column(JSONB, nullable=True)  # Suscripción para web push notifications
+
     # Campo de roles especiales (conservado)
     special_roles = db.Column(db.ARRAY(db.String), default=[])
 
