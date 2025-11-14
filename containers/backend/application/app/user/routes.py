@@ -159,6 +159,7 @@ def get_public_profile(username):
         if not user.is_profile_public:
             # Si el perfil es privado, solo mostrar información muy básica
             return jsonify({
+                'id': user.id,
                 'username': username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
@@ -186,6 +187,7 @@ def get_public_profile(username):
 
         # Solo devolver información pública
         return jsonify({
+            'id': user.id,
             'username': username,
             'first_name': user.first_name,
             'last_name': user.last_name,

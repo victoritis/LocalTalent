@@ -1,12 +1,31 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { ChatList } from './ChatList'
 import { ChatWindow } from './ChatWindow'
-import { Conversation } from '@/services/messaging/messagingApi'
+import { Conversation, getConversations } from '@/services/messaging/messagingApi'
 import { MessageSquare } from 'lucide-react'
 
-export function MessagingApp() {
+interface MessagingAppProps {
+  initialConversationId?: number
+}
+
+export function MessagingApp({ initialConversationId }: MessagingAppProps) {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+
+  // Efecto para seleccionar la conversación inicial si se proporciona
+  useEffect(() => {
+    if (initialConversationId) {
+      // Cargar las conversaciones y seleccionar la indicada
+      getConversations().then(conversations => {
+        const conversation = conversations.find(c => c.id === initialConversationId)
+        if (conversation) {
+          setSelectedConversation(conversation)
+        }
+      }).catch(error => {
+        console.error('Error loading conversations:', error)
+      })
+    }
+  }, [initialConversationId])
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">

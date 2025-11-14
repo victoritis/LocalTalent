@@ -101,9 +101,19 @@ def get_or_create_conversation(user_id):
             db.session.add(conversation)
             db.session.commit()
 
+        # Incluir información del otro usuario en la respuesta
+        other_username = other_user.email.split('@')[0] if other_user.email else None
+
         return jsonify({
             'conversation_id': conversation.id,
-            'created': conversation.createdAt.isoformat() if conversation.createdAt else None
+            'created': conversation.createdAt.isoformat() if conversation.createdAt else None,
+            'other_user': {
+                'id': other_user.id,
+                'username': other_username,
+                'first_name': other_user.first_name,
+                'last_name': other_user.last_name,
+                'profile_image': other_user.profile_image
+            }
         }), 200
     except Exception as e:
         db.session.rollback()

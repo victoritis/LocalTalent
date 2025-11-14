@@ -83,8 +83,11 @@ function PublicProfile() {
 
       toast.success('Redirigiendo a mensajes...')
 
-      // Navegar a la página de mensajes
-      navigate({ to: '/auth/messages' })
+      // Navegar a la página de mensajes con el ID de la conversación
+      navigate({
+        to: '/auth/messages',
+        search: { conversation_id: result.conversation_id }
+      })
     } catch (error) {
       console.error('Error al crear conversación:', error)
       toast.error('No se pudo iniciar la conversación')

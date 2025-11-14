@@ -43,7 +43,17 @@ export const getConversations = async (): Promise<Conversation[]> => {
 }
 
 // Obtener o crear conversación con un usuario
-export const getOrCreateConversation = async (userId: number): Promise<{ conversation_id: number; created: string }> => {
+export const getOrCreateConversation = async (userId: number): Promise<{
+  conversation_id: number
+  created: string
+  other_user: {
+    id: number
+    username: string
+    first_name: string
+    last_name: string
+    profile_image: string
+  }
+}> => {
   const response = await axios.get(`${API_URL}/api/v1/conversations/${userId}`, {
     withCredentials: true,
   })
