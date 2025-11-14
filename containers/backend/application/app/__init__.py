@@ -12,6 +12,8 @@ from flask_socketio import SocketIO
 from app.celery_utils import init_celery
 from redis import Redis
 from app.logger_config import logger
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Extensiones
 db = SQLAlchemy()
@@ -20,6 +22,11 @@ login = LoginManager()
 login.login_message = "Por favor, inicia sesión para acceder a esta página."
 mail = Mail()
 socketio = SocketIO(cors_allowed_origins=["https://localtalent.es", "https://api.localtalent.es"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="redis://redis:6379"
+)
 
 # Declaramos la variable celery a nivel de módulo
 celery = None
@@ -34,6 +41,7 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     socketio.init_app(app)
+    limiter.init_app(app)
 
     # --- Importar el módulo de listeners para que se registren ---
     # La simple importación ejecuta el código del decorador @event.listens_for
@@ -73,6 +81,15 @@ def create_app(config_class=Config):
 
     from app.reviews import bp as reviews_bp
     app.register_blueprint(reviews_bp)
+
+    from app.events import bp as events_bp
+    app.register_blueprint(events_bp)
+
+    from app.projects import bp as projects_bp
+    app.register_blueprint(projects_bp)
+
+    from app.security import bp as security_bp
+    app.register_blueprint(security_bp)
 
     from app.error import bp as error_bp
     app.register_blueprint(error_bp)

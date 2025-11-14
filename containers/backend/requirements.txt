@@ -19,3 +19,4 @@ sqlalchemy-utils
 requests
 flask-socketio
 python-socketio
+flask-limiter

@@ -155,6 +155,35 @@ def get_public_profile(username):
         if not user:
             return jsonify({'error': 'Usuario no encontrado'}), 404
 
+        # Verificar si el perfil es público
+        if not user.is_profile_public:
+            # Si el perfil es privado, solo mostrar información muy básica
+            return jsonify({
+                'username': username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'profile_image': user.profile_image,
+                'is_private': True,
+                'is_verified': user.is_verified
+            }), 200
+
+        # Determinar qué ubicación mostrar
+        location_data = {}
+        if user.show_exact_location:
+            # Mostrar ubicación exacta
+            location_data = {
+                'city': user.city,
+                'country': user.country,
+                'latitude': user.latitude,
+                'longitude': user.longitude
+            }
+        else:
+            # Solo mostrar ciudad y país
+            location_data = {
+                'city': user.city,
+                'country': user.country
+            }
+
         # Solo devolver información pública
         return jsonify({
             'username': username,
@@ -164,8 +193,8 @@ def get_public_profile(username):
             'bio': user.bio,
             'skills': user.skills or [],
             'category': user.category,
-            'city': user.city,
-            'country': user.country,
+            'location': location_data,
+            'is_verified': user.is_verified,
             'created_at': user.createdAt.isoformat() if user.createdAt else None
         }), 200
     except Exception as e:
@@ -219,15 +248,16 @@ def upload_profile_image():
 
 @bp.route('/api/v1/users/map', methods=['GET'])
 def get_users_for_map():
-    """Obtener todos los usuarios con ubicación para el mapa global"""
+    """Obtener todos los usuarios con ubicación para el mapa global (respetando privacidad)"""
     try:
         # Obtener parámetro de filtro por categoría
         category_filter = request.args.get('category', None)
 
-        # Base query: Solo usuarios con ubicación definida
+        # Base query: Solo usuarios con ubicación definida y perfiles públicos
         query = User.query.filter(
             User.is_enabled == True,
             User.deletedAt.is_(None),
+            User.is_profile_public == True,  # Solo perfiles públicos
             User.latitude.isnot(None),
             User.longitude.isnot(None)
         )
@@ -241,18 +271,39 @@ def get_users_for_map():
         users_data = []
         for user in users:
             username = user.email.split('@')[0] if user.email else None
+
+            # Determinar qué ubicación mostrar según configuración de privacidad
+            if user.show_exact_location:
+                # Mostrar ubicación exacta
+                location_data = {
+                    'city': user.city,
+                    'country': user.country,
+                    'latitude': user.latitude,
+                    'longitude': user.longitude,
+                    'exact': True
+                }
+            else:
+                # Mostrar solo ciudad aproximada (agregar ruido aleatorio a las coordenadas)
+                import random
+                noise = 0.05  # Aproximadamente 5km de ruido
+                location_data = {
+                    'city': user.city,
+                    'country': user.country,
+                    'latitude': user.latitude + random.uniform(-noise, noise),
+                    'longitude': user.longitude + random.uniform(-noise, noise),
+                    'exact': False
+                }
+
             users_data.append({
                 'id': user.id,
                 'username': username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'profile_image': user.profile_image,
-                'city': user.city,
-                'country': user.country,
-                'latitude': user.latitude,
-                'longitude': user.longitude,
+                'location': location_data,
                 'skills': user.skills or [],
-                'category': user.category
+                'category': user.category,
+                'is_verified': user.is_verified
             })
 
         return jsonify({
