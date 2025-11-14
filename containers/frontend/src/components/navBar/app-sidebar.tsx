@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Frame, LifeBuoy, Send, Music2, User, Map } from "lucide-react";
+import { Frame, LifeBuoy, Send, Music2, User, Map, Calendar, FolderKanban, MessageSquare, Search } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { useAuth } from '@/auth';
 import { NavMain } from "@/components/navBar/nav-main";
@@ -70,15 +70,35 @@ const staticData: StaticData = {
   navMain: [
     { title: 'Inicio', url: '/auth/home', icon: Music2 },
     { title: 'Mapa de Talento', url: '/auth/user/map', icon: Map },
+    {
+      title: 'Eventos',
+      url: '/auth/events',
+      icon: Calendar,
+      items: [
+        { title: 'Ver Todos', url: '/auth/events' },
+        { title: 'Mis Eventos', url: '/auth/events/my' },
+        { title: 'Crear Evento', url: '/auth/events/create' }
+      ]
+    },
+    {
+      title: 'Proyectos',
+      url: '/auth/projects',
+      icon: FolderKanban,
+      items: [
+        { title: 'Ver Todos', url: '/auth/projects' },
+        { title: 'Mis Proyectos', url: '/auth/projects/my' },
+        { title: 'Crear Proyecto', url: '/auth/projects/create' }
+      ]
+    },
+    { title: 'Mensajes', url: '/auth/messages', icon: MessageSquare },
+    { title: 'Búsqueda Avanzada', url: '/auth/search', icon: Search },
     { title: 'Mi Perfil', url: '/auth/user/profile', icon: User }
   ],
   navSecondary: [
     { title: "Support", url: "/auth/support", icon: LifeBuoy },
     { title: "Feedback", url: "/auth/feedback", icon: Send }
   ],
-  projects: [
-    { name: "Design Engineering", url: "#", icon: Frame }
-  ]
+  projects: []
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
