@@ -4,6 +4,7 @@ from flask_socketio import emit, join_room, leave_room, disconnect
 from app import socketio, db
 from app.models import User, Conversation, Message
 from app.logger_config import logger
+from app.notifications.routes import create_notification
 from datetime import datetime, timezone
 from sqlalchemy import or_
 
@@ -144,7 +145,17 @@ def handle_send_message(data):
         # Determinar el otro participante para enviar notificación
         other_user_id = conversation.participant2_id if conversation.participant1_id == current_user.id else conversation.participant1_id
 
-        # Enviar notificación al otro usuario
+        # Crear notificación en BD
+        create_notification(
+            user_id=other_user_id,
+            notification_type='message',
+            title=f'Nuevo mensaje de {current_user.first_name} {current_user.last_name}',
+            message=content[:100] + ('...' if len(content) > 100 else ''),
+            link=f'/messages?conversation={conversation_id}',
+            data={'conversation_id': conversation_id, 'sender_id': current_user.id}
+        )
+
+        # Enviar notificación WebSocket al otro usuario
         notification_data = {
             'conversation_id': conversation_id,
             'message': message_data,

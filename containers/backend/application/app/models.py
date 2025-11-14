@@ -74,7 +74,7 @@ def receive_before_update(mapper, connection, target):
 # Función para inicializar los oyentes de los eventos
 def setup_base():
     # Modelos activos (sin organizaciones)
-    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation]:
+    for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -172,7 +172,7 @@ def record_audit(mapper, connection, target):
 
 # # Configuración de los oyentes para los modelos (auditoría)
 def setup_audit():
-    for model in [User, Feedback, Portfolio, Message, Conversation]:
+    for model in [User, Feedback, Portfolio, Message, Conversation, Notification]:
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -465,6 +465,29 @@ class Message(Base):
 
     def __repr__(self):
         return f'<Message {self.id} from {self.sender_id}>'
+
+
+# Notification Model
+class Notification(Base):
+    __tablename__ = 'notification'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # 'message', 'profile_view', 'new_user', etc.
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    link = db.Column(db.String(500), nullable=True)  # URL para ir al contenido
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    # Datos adicionales en JSON (flexible)
+    data = db.Column(JSONB, nullable=True)
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Notification {self.id} for user {self.user_id}>'
 
 
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos

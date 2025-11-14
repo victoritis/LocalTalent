@@ -68,6 +68,9 @@ def create_app(config_class=Config):
     from app.messaging import bp as messaging_bp
     app.register_blueprint(messaging_bp)
 
+    from app.notifications import bp as notifications_bp
+    app.register_blueprint(notifications_bp)
+
     from app.error import bp as error_bp
     app.register_blueprint(error_bp)
 
