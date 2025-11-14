@@ -24,9 +24,27 @@ localtalent.es {
     # Compresión
     encode gzip zstd
 
-    # Manejo de SPA - todas las rutas van al frontend (nginx maneja el fallback)
-    reverse_proxy frontend:5173 {
-        header_up Host {host}
+    # Proxy de peticiones a /api/* al backend
+    handle /api/* {
+        reverse_proxy backend:5000 {
+            header_up Host      {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Proxy de peticiones a /socket.io/* al backend para WebSockets
+    handle /socket.io/* {
+        reverse_proxy backend:5000 {
+            header_up Host      {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Manejo de SPA - todas las demás rutas van al frontend
+    handle {
+        reverse_proxy frontend:5173 {
+            header_up Host {host}
+        }
     }
 
     # Certificado autofirmado para desarrollo local
