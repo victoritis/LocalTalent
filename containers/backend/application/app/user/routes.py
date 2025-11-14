@@ -3,9 +3,11 @@ from flask_login import current_user, login_required
 from app.user import bp
 from app.logger_config import logger
 from app import db
-from app.models import User, Portfolio
+from app.models import User, Portfolio, SavedSearch, Review
 import os
 from werkzeug.utils import secure_filename
+from sqlalchemy import func, or_, and_
+import math
 
 # Minimal user blueprint: only session info retained
 
@@ -490,3 +492,322 @@ def delete_portfolio_item(item_id):
         db.session.rollback()
         logger.getChild('user').error(f"Error eliminando item: {str(e)}", exc_info=True)
         return jsonify({'error': 'Error al eliminar item'}), 500
+
+
+# === BÚSQUEDA AVANZADA ===
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calcular la distancia entre dos puntos en la Tierra usando la fórmula de Haversine.
+    Retorna la distancia en kilómetros.
+    """
+    # Radio de la Tierra en kilómetros
+    R = 6371.0
+
+    # Convertir grados a radianes
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+
+    # Diferencias
+    dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+
+    # Fórmula de Haversine
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    distance = R * c
+    return distance
+
+
+@bp.route('/api/v1/users/search', methods=['GET'])
+def advanced_search():
+    """
+    Búsqueda avanzada de usuarios con filtros:
+    - radius: radio de distancia en km (requiere lat/lng)
+    - latitude: latitud del punto de búsqueda
+    - longitude: longitud del punto de búsqueda
+    - skills: habilidades (puede ser múltiple, separadas por coma)
+    - category: categoría de talento
+    - query: búsqueda por nombre/username
+    - sort_by: ordenar por (distance, rating, created_at)
+    - page: número de página (default 1)
+    - per_page: resultados por página (default 20, max 100)
+    """
+    try:
+        # Obtener parámetros de búsqueda
+        radius = request.args.get('radius', type=float)
+        search_lat = request.args.get('latitude', type=float)
+        search_lng = request.args.get('longitude', type=float)
+        skills_param = request.args.get('skills', '')
+        category = request.args.get('category', '')
+        query = request.args.get('query', '')
+        sort_by = request.args.get('sort_by', 'created_at')  # distance, rating, created_at
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 100)
+
+        # Base query: Solo usuarios habilitados con ubicación
+        base_query = User.query.filter(
+            User.is_enabled == True,
+            User.deletedAt.is_(None),
+            User.latitude.isnot(None),
+            User.longitude.isnot(None)
+        )
+
+        # Filtrar por categoría
+        if category:
+            base_query = base_query.filter(User.category == category)
+
+        # Filtrar por habilidades (puede ser múltiple)
+        if skills_param:
+            skills_list = [s.strip() for s in skills_param.split(',') if s.strip()]
+            if skills_list:
+                # Buscar usuarios que tengan al menos una de las habilidades
+                skill_filters = [User.skills.contains([skill]) for skill in skills_list]
+                base_query = base_query.filter(or_(*skill_filters))
+
+        # Filtrar por nombre/username
+        if query:
+            search_pattern = f"%{query}%"
+            base_query = base_query.filter(
+                or_(
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    User.email.ilike(search_pattern)
+                )
+            )
+
+        # Obtener todos los usuarios que cumplen los filtros básicos
+        users = base_query.all()
+
+        # Calcular distancias y filtrar por radio si se proporciona
+        users_with_data = []
+        for user in users:
+            user_data = {
+                'id': user.id,
+                'username': user.email.split('@')[0] if user.email else None,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'profile_image': user.profile_image,
+                'city': user.city,
+                'country': user.country,
+                'latitude': user.latitude,
+                'longitude': user.longitude,
+                'skills': user.skills or [],
+                'category': user.category,
+                'bio': user.bio
+            }
+
+            # Calcular distancia si se proporcionan coordenadas de búsqueda
+            if search_lat is not None and search_lng is not None:
+                distance = haversine_distance(search_lat, search_lng, user.latitude, user.longitude)
+                user_data['distance'] = round(distance, 2)
+
+                # Filtrar por radio si se especifica
+                if radius is not None and distance > radius:
+                    continue
+            else:
+                user_data['distance'] = None
+
+            # Calcular promedio de rating
+            avg_rating = db.session.query(func.avg(Review.rating)).filter_by(
+                reviewee_id=user.id,
+                deletedAt=None
+            ).scalar()
+            user_data['average_rating'] = float(avg_rating) if avg_rating else 0
+
+            # Contar número de reviews
+            review_count = Review.query.filter_by(
+                reviewee_id=user.id,
+                deletedAt=None
+            ).count()
+            user_data['review_count'] = review_count
+
+            users_with_data.append(user_data)
+
+        # Ordenar resultados
+        if sort_by == 'distance' and search_lat is not None and search_lng is not None:
+            users_with_data.sort(key=lambda x: x['distance'] if x['distance'] is not None else float('inf'))
+        elif sort_by == 'rating':
+            users_with_data.sort(key=lambda x: x['average_rating'], reverse=True)
+        else:  # created_at por defecto
+            # Ya está ordenado por ID (creación)
+            pass
+
+        # Paginación manual
+        total_results = len(users_with_data)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_users = users_with_data[start_idx:end_idx]
+
+        total_pages = math.ceil(total_results / per_page) if total_results > 0 else 0
+
+        return jsonify({
+            'users': paginated_users,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total_results,
+                'total_pages': total_pages
+            },
+            'filters': {
+                'radius': radius,
+                'latitude': search_lat,
+                'longitude': search_lng,
+                'skills': skills_param,
+                'category': category,
+                'query': query,
+                'sort_by': sort_by
+            }
+        }), 200
+
+    except Exception as e:
+        logger.getChild('user').error(f"Error en búsqueda avanzada: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+# === BÚSQUEDAS GUARDADAS ===
+
+@bp.route('/api/v1/saved-searches', methods=['GET'])
+@login_required
+def get_saved_searches():
+    """Obtener las búsquedas guardadas del usuario actual"""
+    try:
+        searches = SavedSearch.query.filter_by(
+            user_id=current_user.id,
+            deletedAt=None
+        ).order_by(SavedSearch.createdAt.desc()).all()
+
+        searches_data = []
+        for search in searches:
+            searches_data.append({
+                'id': search.id,
+                'name': search.name,
+                'search_params': search.search_params,
+                'created_at': search.createdAt.isoformat() if search.createdAt else None
+            })
+
+        return jsonify({
+            'searches': searches_data,
+            'total': len(searches_data)
+        }), 200
+
+    except Exception as e:
+        logger.getChild('user').error(f"Error obteniendo búsquedas guardadas: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@bp.route('/api/v1/saved-searches', methods=['POST'])
+@login_required
+def create_saved_search():
+    """Crear una nueva búsqueda guardada"""
+    try:
+        data = request.get_json()
+
+        # Validar campos requeridos
+        if not data or 'name' not in data or 'search_params' not in data:
+            return jsonify({'error': 'Faltan campos requeridos (name, search_params)'}), 400
+
+        name = data['name']
+        search_params = data['search_params']
+
+        # Validar que search_params sea un diccionario
+        if not isinstance(search_params, dict):
+            return jsonify({'error': 'search_params debe ser un objeto JSON'}), 400
+
+        # Crear búsqueda guardada
+        saved_search = SavedSearch(
+            user_id=current_user.id,
+            name=name,
+            search_params=search_params
+        )
+
+        db.session.add(saved_search)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Búsqueda guardada correctamente',
+            'search': {
+                'id': saved_search.id,
+                'name': saved_search.name,
+                'search_params': saved_search.search_params,
+                'created_at': saved_search.createdAt.isoformat() if saved_search.createdAt else None
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error creando búsqueda guardada: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al crear la búsqueda guardada'}), 500
+
+
+@bp.route('/api/v1/saved-searches/<int:search_id>', methods=['DELETE'])
+@login_required
+def delete_saved_search(search_id):
+    """Eliminar una búsqueda guardada (soft delete)"""
+    try:
+        from datetime import datetime, timezone
+        search = SavedSearch.query.filter_by(
+            id=search_id,
+            user_id=current_user.id,
+            deletedAt=None
+        ).first()
+
+        if not search:
+            return jsonify({'error': 'Búsqueda guardada no encontrada'}), 404
+
+        # Soft delete
+        search.deletedAt = datetime.now(timezone.utc)
+        db.session.commit()
+
+        return jsonify({'message': 'Búsqueda guardada eliminada correctamente'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error eliminando búsqueda guardada: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al eliminar la búsqueda guardada'}), 500
+
+
+@bp.route('/api/v1/saved-searches/<int:search_id>', methods=['PUT'])
+@login_required
+def update_saved_search(search_id):
+    """Actualizar una búsqueda guardada"""
+    try:
+        search = SavedSearch.query.filter_by(
+            id=search_id,
+            user_id=current_user.id,
+            deletedAt=None
+        ).first()
+
+        if not search:
+            return jsonify({'error': 'Búsqueda guardada no encontrada'}), 404
+
+        data = request.get_json()
+
+        # Actualizar campos
+        if 'name' in data:
+            search.name = data['name']
+        if 'search_params' in data:
+            if not isinstance(data['search_params'], dict):
+                return jsonify({'error': 'search_params debe ser un objeto JSON'}), 400
+            search.search_params = data['search_params']
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Búsqueda guardada actualizada correctamente',
+            'search': {
+                'id': search.id,
+                'name': search.name,
+                'search_params': search.search_params,
+                'created_at': search.createdAt.isoformat() if search.createdAt else None,
+                'updated_at': search.updatedAt.isoformat() if search.updatedAt else None
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error actualizando búsqueda guardada: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al actualizar la búsqueda guardada'}), 500
