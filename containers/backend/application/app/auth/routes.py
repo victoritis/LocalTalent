@@ -284,6 +284,71 @@ def reset_password(token):
         return jsonify({"message": "Error interno del servidor", "code": "internal_server_error"}), 500
 
 
+@bp.route('/api/v1/register', methods=['POST'])
+def register():
+    """
+    Endpoint de registro inicial.
+    - Recibe email y password del usuario.
+    - Valida que el email no exista.
+    - Crea usuario con is_enabled=False.
+    - Genera otp_secret.
+    - Envía email con token de verificación.
+    - Retorna OK o error.
+    """
+    try:
+        logger.getChild('auth').info(f"Solicitud de registro inicial recibida")
+
+        # Obtener y validar los datos de la solicitud
+        data = request.get_json()
+        if not data or 'email' not in data or 'password' not in data:
+            logger.getChild('auth').warning(f"Solicitud de registro sin datos completos")
+            return jsonify({"msg": "Los campos 'email' y 'password' son obligatorios"}), 400
+
+        email = data['email'].strip().lower()
+        password = data['password']
+
+        # Validar formato de email básico
+        if '@' not in email or '.' not in email:
+            logger.getChild('auth').warning(f"Intento de registro con email inválido: {email}")
+            return jsonify({"msg": "El formato del email no es válido"}), 400
+
+        # Validar longitud de contraseña
+        if len(password) < 8:
+            logger.getChild('auth').warning(f"Intento de registro con contraseña demasiado corta")
+            return jsonify({"msg": "La contraseña debe tener al menos 8 caracteres"}), 400
+
+        # Verificar que el email no exista
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            logger.getChild('auth').warning(f"Intento de registro con email ya existente: {email}")
+            return jsonify({"msg": "El email ya está registrado"}), 400
+
+        # Crear nuevo usuario
+        new_user = User(email=email)
+        new_user.set_password(password)
+        new_user.is_enabled = False  # Cuenta deshabilitada hasta verificación
+        new_user.generate_otp_secret()  # Generar secreto TOTP
+
+        # Guardar en base de datos
+        db.session.add(new_user)
+        db.session.commit()
+
+        # Enviar email de activación
+        send_create_account_email(new_user)
+
+        logger.getChild('auth').info(f"Usuario creado exitosamente: {email}. Email de activación enviado.")
+        return jsonify({"msg": "Registro exitoso. Por favor, revisa tu correo para activar tu cuenta."}), 201
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.getChild('auth').error(f"Error de base de datos en registro: {str(e)}", exc_info=True)
+        return jsonify({"msg": "Error al crear la cuenta. Por favor, inténtalo de nuevo."}), 500
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('auth').error(f"Error en registro: {str(e)}", exc_info=True)
+        return jsonify({"msg": "Error interno del servidor"}), 500
+
+
 @bp.route('/api/v1/recover-password', methods=['POST'])
 def recover_password():
     """
@@ -388,28 +453,29 @@ def register_step1(token):
 @bp.route('/api/v1/otp-qr/<token>', methods=['GET'])
 def get_otp_qr(token):
     """
-    Dado un <token>, obtenemos al usuario correspondiente y devolvemos 
-    el provisioning URI (que se usará para generar el QR).
+    Dado un <token>, obtenemos al usuario correspondiente y devolvemos
+    el provisioning URI (que se usará para generar el QR) y el secreto TOTP.
     """
     try:
         logger.getChild('auth').info(f"Solicitud de QR para OTP con token")
-        
+
         # Verificar si el token ya está revocado en la base de datos
         if JWTToken.find(token) is not None:
             logger.getChild('auth').warning(f"Intento de uso de token ya revocado para obtener QR OTP")
             return jsonify({"message": "El token ya ha sido utilizado o revocado"}), 400
-        
+
         # user.verify_verification_token(token) => Obtiene el user o None si el token es inválido
         user = User.verify_verification_token(token)
         if not user:
             logger.getChild('auth').warning(f"Token inválido o expirado para obtener QR OTP")
             return jsonify({"msg": "Token de registro inválido o expirado"}), 400
 
-        # Obtener la URI de aprovisionamiento
+        # Obtener la URI de aprovisionamiento y el secreto
         provisioning_uri = user.get_otp_uri()
-        
+        otp_secret = user.otp_secret
+
         logger.getChild('auth').info(f"QR para OTP generado exitosamente para usuario: {user.email}")
-        return jsonify({"qr_uri": provisioning_uri}), 200
+        return jsonify({"qr_uri": provisioning_uri, "otp_secret": otp_secret}), 200
     except Exception as e:
         logger.getChild('auth').error(f"Error al generar QR para OTP: {str(e)}", exc_info=True)
         return jsonify({"message": "Error interno del servidor", "code": "internal_server_error"}), 500

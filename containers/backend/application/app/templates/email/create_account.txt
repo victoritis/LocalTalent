@@ -1,9 +1,16 @@
 Hola {{ user.email }},
 
-Para restablecer tu contraseña, visita el siguiente enlace:
+Bienvenido/a a Local Talent. Para completar tu registro, visita el siguiente enlace:
 {{ reset_url }}
 
-Si no solicitaste este cambio, por favor ignora este mensaje.
+Una vez que hagas clic, deberás:
+1. Completar tus datos personales
+2. Configurar la autenticación de dos factores (TOTP)
+3. Verificar tu código de autenticación
+
+Este enlace expirará en 10 minutos por seguridad.
+
+Si no solicitaste este registro, por favor ignora este mensaje.
 
 Saludos,
-El equipo de la aplicación
+El equipo de Local Talent
