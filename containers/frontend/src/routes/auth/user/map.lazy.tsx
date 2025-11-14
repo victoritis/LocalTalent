@@ -31,6 +31,7 @@ function UserMap() {
   const [filteredUsers, setFilteredUsers] = useState<UserLocation[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
 
   useEffect(() => {
     fetchUsers()
@@ -56,7 +57,7 @@ function UserMap() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/v1/users/map', {
+      const response = await fetch(`${apiUrl}/api/v1/users/map`, {
         credentials: 'include'
       })
 

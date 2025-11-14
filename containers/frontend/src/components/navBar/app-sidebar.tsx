@@ -68,7 +68,7 @@ const initialUserData: UserData = {
 const staticData: StaticData = {
   user: initialUserData, // Usar los datos iniciales
   navMain: [
-    { title: 'Inicio', url: '/auth/$username/home', icon: Music2 },
+    { title: 'Inicio', url: '/auth/home', icon: Music2 },
     { title: 'Mapa de Talento', url: '/auth/user/map', icon: Map },
     { title: 'Mi Perfil', url: '/auth/user/profile', icon: User }
   ],
@@ -85,21 +85,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const { session } = useAuth();
   const username = session?.username;
-  const [navMain, setNavMain] = React.useState<NavItem[]>([]);
+  const [navMain, setNavMain] = React.useState<NavItem[]>(staticData.navMain);
   const [navSecondary, setNavSecondary] = React.useState(staticData.navSecondary);
   const [currentUserData, setCurrentUserData] = React.useState<UserData>(initialUserData);
-
-  React.useEffect(() => {
-    // Construir rutas dinámicas cuando tengamos username
-    if (username) {
-      setNavMain(
-        staticData.navMain.map(item => ({
-          ...item,
-          url: item.url.replace('$username', username)
-        }))
-      )
-    }
-  }, [username]);
 
   // Derivar datos básicos del usuario desde la sesión
   React.useEffect(() => {
@@ -132,8 +120,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <a href="#">
                 <img src="/images/cve-sentinel2.png" alt="App Logo" className="size-8 object-contain" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">App Starter</span>
-                  <span className="truncate text-xs">Reusable Base</span>
+                  <span className="truncate font-semibold">LocalTalent</span>
+                  <span className="truncate text-xs">Talento Local</span>
                 </div>
               </a>
             </SidebarMenuButton>

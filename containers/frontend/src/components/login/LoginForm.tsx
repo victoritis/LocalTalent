@@ -76,10 +76,8 @@ export function LoginForm() {
       // pero pasando username, password y el otpValue que se obtiene del input.
       const success = await login(validatedCredentials.username, validatedCredentials.password, otpValue);
       if (success) {
-        // Obtener el parámetro 'redirect' de la URL actual (por ejemplo, para ir al dashboard)
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectUrl = urlParams.get("redirect") || "/auth/organizations/my-organizations";
-        window.location.href = `${apiFrontend}${redirectUrl}`;
+        // Redirigir al home del usuario después de login exitoso
+        window.location.href = `${apiFrontend}/`;
       } else {
         setCustomAlert({
           type: "error",

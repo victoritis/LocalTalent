@@ -35,6 +35,7 @@ export function CreateReview({
   const [canReview, setCanReview] = useState(false)
   const [canReviewReason, setCanReviewReason] = useState('')
   const [checkingPermission, setCheckingPermission] = useState(true)
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
 
   useEffect(() => {
     if (open) {
@@ -45,7 +46,7 @@ export function CreateReview({
   const checkCanReview = async () => {
     try {
       setCheckingPermission(true)
-      const response = await fetch(`/api/v1/reviews/can-review/${username}`, {
+      const response = await fetch(`${apiUrl}/api/v1/reviews/can-review/${username}`, {
         credentials: 'include',
       })
 
@@ -74,7 +75,7 @@ export function CreateReview({
 
     try {
       setLoading(true)
-      const response = await fetch('/api/v1/reviews', {
+      const response = await fetch(`${apiUrl}/api/v1/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

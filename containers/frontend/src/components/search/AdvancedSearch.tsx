@@ -68,6 +68,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
   const [totalPages, setTotalPages] = useState(0)
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([])
   const [skillInput, setSkillInput] = useState('')
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
 
   useEffect(() => {
     fetchCategories()
@@ -75,7 +76,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/v1/categories', {
+      const response = await fetch(`${apiUrl}/api/v1/categories`, {
         credentials: 'include',
       })
       if (response.ok) {
@@ -105,7 +106,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
       if (filters.page) params.append('page', filters.page.toString())
       if (filters.per_page) params.append('per_page', filters.per_page.toString())
 
-      const response = await fetch(`/api/v1/users/search?${params.toString()}`, {
+      const response = await fetch(`${apiUrl}/api/v1/users/search?${params.toString()}`, {
         credentials: 'include',
       })
 
@@ -173,7 +174,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
     if (!name) return
 
     try {
-      const response = await fetch('/api/v1/saved-searches', {
+      const response = await fetch(`${apiUrl}/api/v1/saved-searches`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

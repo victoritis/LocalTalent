@@ -17,3 +17,5 @@ redis
 flower
 sqlalchemy-utils
 requests
+flask-socketio
+python-socketio

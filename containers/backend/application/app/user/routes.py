@@ -275,24 +275,14 @@ def get_users_for_map():
             # Determinar qué ubicación mostrar según configuración de privacidad
             if user.show_exact_location:
                 # Mostrar ubicación exacta
-                location_data = {
-                    'city': user.city,
-                    'country': user.country,
-                    'latitude': user.latitude,
-                    'longitude': user.longitude,
-                    'exact': True
-                }
+                latitude = user.latitude
+                longitude = user.longitude
             else:
                 # Mostrar solo ciudad aproximada (agregar ruido aleatorio a las coordenadas)
                 import random
                 noise = 0.05  # Aproximadamente 5km de ruido
-                location_data = {
-                    'city': user.city,
-                    'country': user.country,
-                    'latitude': user.latitude + random.uniform(-noise, noise),
-                    'longitude': user.longitude + random.uniform(-noise, noise),
-                    'exact': False
-                }
+                latitude = user.latitude + random.uniform(-noise, noise)
+                longitude = user.longitude + random.uniform(-noise, noise)
 
             users_data.append({
                 'id': user.id,
@@ -300,7 +290,10 @@ def get_users_for_map():
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'profile_image': user.profile_image,
-                'location': location_data,
+                'city': user.city,
+                'country': user.country,
+                'latitude': latitude,
+                'longitude': longitude,
                 'skills': user.skills or [],
                 'category': user.category,
                 'is_verified': user.is_verified

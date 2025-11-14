@@ -39,6 +39,7 @@ function MyProfile() {
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
 
   // Form state
   const [firstName, setFirstName] = useState('')
@@ -58,7 +59,7 @@ function MyProfile() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/v1/profile/me', {
+      const response = await fetch(`${apiUrl}/api/v1/profile/me`, {
         credentials: 'include'
       })
 
@@ -93,7 +94,7 @@ function MyProfile() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/v1/profile/me', {
+      const response = await fetch(`${apiUrl}/api/v1/profile/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -158,7 +159,7 @@ function MyProfile() {
     formData.append('image', file)
 
     try {
-      const response = await fetch('/api/v1/profile/upload-image', {
+      const response = await fetch(`${apiUrl}/api/v1/profile/upload-image`, {
         method: 'POST',
         credentials: 'include',
         body: formData
