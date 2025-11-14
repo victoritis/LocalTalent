@@ -1,57 +1,51 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
-import { Bell, Mail, Check, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, Mail } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { toast } from 'sonner'
 import {
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isPushSubscribed,
   sendTestNotification,
-} from '../../services/push/pushNotifications'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+} from '@/services/push/pushNotifications'
+import { getNotificationPreferences, updateNotificationPreferences } from '@/services/notifications/notificationsApi'
 
 interface NotificationPreferences {
   email_notifications: boolean
   push_notifications: boolean
 }
 
-export const NotificationSettings: React.FC = () => {
+export function NotificationSettings() {
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email_notifications: true,
     push_notifications: false,
   })
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     loadPreferences()
   }, [])
 
   const loadPreferences = async () => {
-    setIsLoading(true)
     try {
-      const response = await axios.get(`${API_URL}/api/v1/notifications/preferences`, {
-        withCredentials: true,
-      })
-
+      const data = await getNotificationPreferences()
       const isPush = await isPushSubscribed()
 
       setPreferences({
-        email_notifications: response.data.email_notifications,
+        email_notifications: data.email_notifications,
         push_notifications: isPush,
       })
     } catch (error) {
       console.error('Error cargando preferencias:', error)
-      showMessage('error', 'Error al cargar preferencias')
+      toast.error('Error al cargar las preferencias de notificaciones')
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleEmailToggle = async () => {
@@ -59,17 +53,13 @@ export const NotificationSettings: React.FC = () => {
     try {
       const newValue = !preferences.email_notifications
 
-      await axios.put(
-        `${API_URL}/api/v1/notifications/preferences`,
-        { email_notifications: newValue },
-        { withCredentials: true }
-      )
+      await updateNotificationPreferences({ email_notifications: newValue })
 
       setPreferences((prev) => ({ ...prev, email_notifications: newValue }))
-      showMessage('success', `Notificaciones por email ${newValue ? 'activadas' : 'desactivadas'}`)
+      toast.success(`Notificaciones por email ${newValue ? 'activadas' : 'desactivadas'}`)
     } catch (error) {
       console.error('Error actualizando preferencias:', error)
-      showMessage('error', 'Error al actualizar preferencias')
+      toast.error('Error al actualizar las preferencias')
     } finally {
       setIsSaving(false)
     }
@@ -85,26 +75,26 @@ export const NotificationSettings: React.FC = () => {
         const success = await subscribeToPushNotifications()
         if (success) {
           setPreferences((prev) => ({ ...prev, push_notifications: true }))
-          showMessage('success', 'Notificaciones push activadas')
+          toast.success('Notificaciones push activadas')
 
-          // Enviar notificaciÛn de prueba
+          // Enviar notificaci√≥n de prueba
           setTimeout(() => sendTestNotification(), 1000)
         } else {
-          showMessage('error', 'No se pudo activar las notificaciones push')
+          toast.error('No se pudo activar las notificaciones push. Verifica los permisos del navegador.')
         }
       } else {
-        // Cancelar suscripciÛn
+        // Cancelar suscripci√≥n
         const success = await unsubscribeFromPushNotifications()
         if (success) {
           setPreferences((prev) => ({ ...prev, push_notifications: false }))
-          showMessage('success', 'Notificaciones push desactivadas')
+          toast.success('Notificaciones push desactivadas')
         } else {
-          showMessage('error', 'No se pudo desactivar las notificaciones push')
+          toast.error('No se pudo desactivar las notificaciones push')
         }
       }
     } catch (error) {
       console.error('Error con push notifications:', error)
-      showMessage('error', 'Error al gestionar notificaciones push')
+      toast.error('Error al gestionar las notificaciones push')
     } finally {
       setIsSaving(false)
     }
@@ -114,119 +104,102 @@ export const NotificationSettings: React.FC = () => {
     try {
       const success = await sendTestNotification()
       if (success) {
-        showMessage('success', 'NotificaciÛn de prueba enviada')
+        toast.success('Notificaci√≥n de prueba enviada')
       } else {
-        showMessage('error', 'No se pudo enviar la notificaciÛn de prueba')
+        toast.error('No se pudo enviar la notificaci√≥n de prueba')
       }
     } catch (error) {
-      console.error('Error enviando notificaciÛn de prueba:', error)
-      showMessage('error', 'Error al enviar notificaciÛn de prueba')
+      console.error('Error enviando notificaci√≥n de prueba:', error)
+      toast.error('Error al enviar la notificaci√≥n de prueba')
     }
   }
 
   if (isLoading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow">
-        <p className="text-gray-600">Cargando preferencias...</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Notificaciones</CardTitle>
+          <CardDescription>Cargando preferencias...</CardDescription>
+        </CardHeader>
+      </Card>
     )
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">ConfiguraciÛn de Notificaciones</h2>
-        <p className="text-gray-600">Gestiona cÛmo deseas recibir notificaciones de LocalTalent</p>
-      </div>
-
-      {message && (
-        <div
-          className={`p-4 rounded-md flex items-center gap-2 ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <X className="w-5 h-5" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {/* Notificaciones por Email */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-start gap-3">
-            <Mail className="w-6 h-6 text-purple-600 mt-1" />
-            <div>
-              <h3 className="font-semibold text-gray-900">Notificaciones por Email</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Recibe emails cuando alguien ve tu perfil, hay nuevos usuarios en tu ciudad, eventos prÛximos, etc.
-              </p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuraci√≥n de Notificaciones</CardTitle>
+          <CardDescription>
+            Gestiona c√≥mo deseas recibir notificaciones de LocalTalent
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Notificaciones por Email */}
+          <div className="flex items-center justify-between space-x-4 rounded-lg border p-4">
+            <div className="flex items-start space-x-4">
+              <Mail className="w-6 h-6 text-primary mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="email-notifications" className="text-base">
+                  Notificaciones por Email
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Recibe emails cuando alguien ve tu perfil, hay nuevos usuarios en tu ciudad, eventos pr√≥ximos, etc.
+                </p>
+              </div>
             </div>
-          </div>
-          <button
-            onClick={handleEmailToggle}
-            disabled={isSaving}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-              preferences.email_notifications ? 'bg-purple-600' : 'bg-gray-300'
-            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                preferences.email_notifications ? 'translate-x-6' : 'translate-x-1'
-              }`}
+            <Switch
+              id="email-notifications"
+              checked={preferences.email_notifications}
+              onCheckedChange={handleEmailToggle}
+              disabled={isSaving}
             />
-          </button>
-        </div>
+          </div>
 
-        {/* Notificaciones Push */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-start gap-3">
-            <Bell className="w-6 h-6 text-purple-600 mt-1" />
-            <div>
-              <h3 className="font-semibold text-gray-900">Notificaciones Push</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Recibe notificaciones en tiempo real en tu navegador, incluso cuando no est·s en la aplicaciÛn.
-              </p>
-              {preferences.push_notifications && (
-                <button
-                  onClick={handleTestPush}
-                  className="text-xs text-purple-600 hover:text-purple-700 mt-2 underline"
-                >
-                  Enviar notificaciÛn de prueba
-                </button>
-              )}
+          {/* Notificaciones Push */}
+          <div className="flex items-center justify-between space-x-4 rounded-lg border p-4">
+            <div className="flex items-start space-x-4">
+              <Bell className="w-6 h-6 text-primary mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="push-notifications" className="text-base">
+                  Notificaciones Push
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Recibe notificaciones en tiempo real en tu navegador, incluso cuando no est√°s en la aplicaci√≥n.
+                </p>
+                {preferences.push_notifications && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={handleTestPush}
+                    className="h-auto p-0 text-xs"
+                  >
+                    Enviar notificaci√≥n de prueba
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          <button
-            onClick={handlePushToggle}
-            disabled={isSaving}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-              preferences.push_notifications ? 'bg-purple-600' : 'bg-gray-300'
-            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                preferences.push_notifications ? 'translate-x-6' : 'translate-x-1'
-              }`}
+            <Switch
+              id="push-notifications"
+              checked={preferences.push_notifications}
+              onCheckedChange={handlePushToggle}
+              disabled={isSaving}
             />
-          </button>
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">9 Sobre las notificaciones</h4>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Puedes desactivar las notificaciones en cualquier momento</li>
-          <li>Las notificaciones push requieren permiso del navegador</li>
-          <li>Recibir·s notificaciones sobre nuevos mensajes, eventos, valoraciones y m·s</li>
-          <li>Tus preferencias se guardan autom·ticamente</li>
-        </ul>
-      </div>
+      <Alert>
+        <AlertDescription className="space-y-2">
+          <p className="font-semibold">‚ÑπÔ∏è Sobre las notificaciones</p>
+          <ul className="text-sm space-y-1 list-disc list-inside">
+            <li>Puedes desactivar las notificaciones en cualquier momento</li>
+            <li>Las notificaciones push requieren permiso del navegador</li>
+            <li>Recibir√°s notificaciones sobre nuevos mensajes, eventos, valoraciones y m√°s</li>
+            <li>Tus preferencias se guardan autom√°ticamente</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
     </div>
   )
 }
