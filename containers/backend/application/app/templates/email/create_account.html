@@ -96,11 +96,17 @@
     </div>
     <div class="content">
         <p>Hola <span class="user-email">{{ user.email }}</span>,</p>
-        <p>Para activar tu cuenta y empezar a usar la aplicación, haz clic en el siguiente botón:</p>
+        <p>Bienvenido/a a <strong>Local Talent</strong>. Para completar tu registro, haz clic en el siguiente botón:</p>
         <p>
-            <a href="{{ reset_url }}" class="button">Activar Cuenta</a> <!-- Texto del botón actualizado -->
+            <a href="{{ reset_url }}" class="button">Completar Registro</a>
         </p>
-        <p>Gracias por unirte a <strong>App Starter</strong>.</p>
+        <p>Una vez que hagas clic, deberás:</p>
+        <p style="text-align: left; max-width: 400px; margin: 16px auto;">
+            1. Completar tus datos personales<br>
+            2. Configurar la autenticación de dos factores (TOTP)<br>
+            3. Verificar tu código de autenticación
+        </p>
+        <p><small>Este enlace expirará en 10 minutos por seguridad.</small></p>
     </div>
     <div class="footer">
         <p>Saludos,<br>El equipo de la aplicación</p>
