@@ -29,7 +29,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: undefined,
+        // Asegurar que los archivos tengan hash para cache busting
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
+    },
+    // Mejorar el manejo de errores de módulos dinámicos
+    modulePreload: {
+      polyfill: true,
     },
   },
 });
