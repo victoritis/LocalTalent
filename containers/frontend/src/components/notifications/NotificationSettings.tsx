@@ -10,6 +10,7 @@ import {
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isPushSubscribed,
+  getSubscriptionStatus,
   sendTestNotification,
 } from '@/services/push/pushNotifications'
 import { getNotificationPreferences, updateNotificationPreferences } from '@/services/notifications/notificationsApi'
@@ -34,13 +35,20 @@ export function NotificationSettings() {
   const loadPreferences = async () => {
     try {
       const data = await getNotificationPreferences()
+      // Prefer server-side subscription status if available
+      let pushServerStatus = null
+      try {
+        const serverStatus = await getSubscriptionStatus()
+        pushServerStatus = serverStatus?.is_subscribed ?? null
+      } catch (err) {
+        // no-op: fallback to local push state
+      }
+
       const isPushLocal = await isPushSubscribed()
 
-      // Preferimos la preferencia del servidor si está disponible, pero
-      // también comprobamos si el navegador está suscrito localmente.
       setPreferences({
-        email_notifications: data.email_notifications,
-        push_notifications: data.push_notifications ?? isPushLocal,
+        email_notifications: !!data?.email_notifications,
+        push_notifications: (data?.push_notifications ?? pushServerStatus) || isPushLocal,
       })
     } catch (error) {
       console.error('Error cargando preferencias:', error)
