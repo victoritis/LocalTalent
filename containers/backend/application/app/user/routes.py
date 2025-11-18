@@ -280,7 +280,8 @@ def get_users_for_map():
             else:
                 # Mostrar solo ciudad aproximada (agregar ruido aleatorio a las coordenadas)
                 import random
-                noise = 0.05  # Aproximadamente 5km de ruido
+                # Ruido pequeño para privacidad: ~500 metros (0.0045 grados)
+                noise = 0.0045
                 latitude = user.latitude + random.uniform(-noise, noise)
                 longitude = user.longitude + random.uniform(-noise, noise)
 

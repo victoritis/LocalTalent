@@ -24,22 +24,39 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth'
 
 export function ProjectDetail() {
-  const { projectId } = useParams({ strict: false })
+  const { id } = useParams({ strict: false })
   const navigate = useNavigate()
   const { user } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (projectId) {
-      loadProject()
+    let cancelled = false
+    if (!id) return
+
+    ;(async () => {
+      try {
+        setLoading(true)
+        const data = await getProject(Number(id))
+        if (cancelled) return
+        setProject(data)
+      } catch (error: any) {
+        console.error('Error loading project:', error)
+        toast.error(error.response?.data?.error || 'Error al cargar el proyecto')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [projectId])
+  }, [id])
 
   const loadProject = async () => {
     try {
       setLoading(true)
-      const data = await getProject(Number(projectId))
+  const data = await getProject(Number(id))
       setProject(data)
     } catch (error: any) {
       console.error('Error loading project:', error)
@@ -51,7 +68,7 @@ export function ProjectDetail() {
 
   const handleJoinProject = async () => {
     try {
-      await addMember(Number(projectId))
+  await addMember(Number(id))
       toast.success('¡Te has unido al proyecto!')
       await loadProject()
     } catch (error: any) {
@@ -64,7 +81,7 @@ export function ProjectDetail() {
     if (!confirm('¿Estás seguro de que deseas salir del proyecto?')) return
 
     try {
-      await removeMember(Number(projectId), user?.user_id!)
+  await removeMember(Number(id), user?.user_id!)
       toast.success('Has salido del proyecto')
       await loadProject()
     } catch (error: any) {
@@ -77,7 +94,7 @@ export function ProjectDetail() {
     if (!confirm(`¿Estás seguro de que deseas remover a ${userName} del proyecto?`)) return
 
     try {
-      await removeMember(Number(projectId), userId)
+  await removeMember(Number(id), userId)
       toast.success('Miembro removido del proyecto')
       await loadProject()
     } catch (error: any) {

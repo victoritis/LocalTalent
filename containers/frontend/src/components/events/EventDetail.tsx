@@ -21,7 +21,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth'
 
 export function EventDetail() {
-  const { eventId } = useParams({ strict: false })
+  const { id } = useParams({ strict: false })
   const navigate = useNavigate()
   const { user } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
@@ -33,10 +33,33 @@ export function EventDetail() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (eventId) {
-      loadEventData()
+    let cancelled = false
+    if (!id) return
+
+    ;(async () => {
+      try {
+        setLoading(true)
+        const eventData = await getEvent(Number(id))
+        if (cancelled) return
+        setEvent(eventData)
+
+        if (eventData.user_rsvp?.status === 'confirmed') {
+          const messagesData = await getEventMessages(Number(id))
+          if (cancelled) return
+          setMessages(messagesData.messages)
+        }
+      } catch (error: any) {
+        console.error('Error loading event:', error)
+        toast.error(error.response?.data?.error || 'Error al cargar el evento')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [eventId])
+  }, [id])
 
   useEffect(() => {
     scrollToBottom()
@@ -49,12 +72,12 @@ export function EventDetail() {
   const loadEventData = async () => {
     try {
       setLoading(true)
-      const eventData = await getEvent(Number(eventId))
+  const eventData = await getEvent(Number(id))
       setEvent(eventData)
 
       // Cargar mensajes si el usuario confirmó asistencia
       if (eventData.user_rsvp?.status === 'confirmed') {
-        const messagesData = await getEventMessages(Number(eventId))
+  const messagesData = await getEventMessages(Number(id))
         setMessages(messagesData.messages)
       }
     } catch (error: any) {
@@ -68,7 +91,7 @@ export function EventDetail() {
   const handleRSVP = async (status: 'confirmed' | 'declined') => {
     try {
       setProcessingRSVP(true)
-      await createRSVP(Number(eventId), { status })
+  await createRSVP(Number(id), { status })
       toast.success(status === 'confirmed' ? '¡Asistencia confirmada!' : 'Asistencia declinada')
       await loadEventData()
     } catch (error: any) {
@@ -82,7 +105,7 @@ export function EventDetail() {
   const handleCancelRSVP = async () => {
     try {
       setProcessingRSVP(true)
-      await cancelRSVP(Number(eventId))
+  await cancelRSVP(Number(id))
       toast.success('Asistencia cancelada')
       await loadEventData()
     } catch (error: any) {
@@ -99,7 +122,7 @@ export function EventDetail() {
 
     try {
       setSendingMessage(true)
-      const response = await sendEventMessage(Number(eventId), newMessage)
+  const response = await sendEventMessage(Number(id), newMessage)
       setMessages([...messages, response.event_message])
       setNewMessage('')
     } catch (error: any) {
@@ -114,7 +137,7 @@ export function EventDetail() {
     if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) return
 
     try {
-      await deleteEvent(Number(eventId))
+  await deleteEvent(Number(id))
       toast.success('Evento eliminado correctamente')
       navigate({ to: '/events' })
     } catch (error: any) {

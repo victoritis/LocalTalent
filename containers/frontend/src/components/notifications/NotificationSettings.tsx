@@ -34,11 +34,13 @@ export function NotificationSettings() {
   const loadPreferences = async () => {
     try {
       const data = await getNotificationPreferences()
-      const isPush = await isPushSubscribed()
+      const isPushLocal = await isPushSubscribed()
 
+      // Preferimos la preferencia del servidor si está disponible, pero
+      // también comprobamos si el navegador está suscrito localmente.
       setPreferences({
         email_notifications: data.email_notifications,
-        push_notifications: isPush,
+        push_notifications: data.push_notifications ?? isPushLocal,
       })
     } catch (error) {
       console.error('Error cargando preferencias:', error)
