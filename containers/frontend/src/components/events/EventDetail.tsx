@@ -190,7 +190,7 @@ export function EventDetail() {
                 </div>
                 {isCreator && (
                   <div className="flex gap-2">
-                    <Link to="/events/$eventId/edit" params={{ eventId: eventId! }}>
+                    <Link to="/auth/events/$id" params={{ id: eventId! }}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4 mr-1" />
                         Editar

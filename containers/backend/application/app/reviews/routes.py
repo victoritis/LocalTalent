@@ -15,7 +15,7 @@ def can_review_user(username):
     try:
         # Buscar usuario por username
         reviewee = User.query.filter(
-            User.email.like(f"{username}@%"),
+            User.username == username,
             User.is_enabled == True,
             User.deletedAt.is_(None)
         ).first()

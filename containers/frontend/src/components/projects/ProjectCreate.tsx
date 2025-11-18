@@ -86,8 +86,8 @@ export function ProjectCreate() {
     try {
       setLoading(true)
       const response = await createProject(formData)
-      toast.success('Proyecto creado correctamente')
-      navigate({ to: '/projects/$projectId', params: { projectId: response.project.id.toString() } })
+  toast.success('Proyecto creado correctamente')
+  navigate({ to: '/auth/projects/$id', params: { id: response.project.id.toString() } })
     } catch (error: any) {
       console.error('Error creating project:', error)
       toast.error(error.response?.data?.error || 'Error al crear el proyecto')

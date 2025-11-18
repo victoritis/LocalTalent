@@ -41,13 +41,15 @@ function PublicProfile() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
+
   useEffect(() => {
     fetchProfile()
   }, [username])
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`/api/v1/profile/${username}`, {
+      const response = await fetch(`${apiUrl}/api/v1/profile/${username}`, {
         credentials: 'include'
       })
 

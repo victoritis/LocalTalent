@@ -29,6 +29,8 @@ export function ReviewList({ username, showAverage = true }: ReviewListProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
+
   useEffect(() => {
     fetchReviews()
   }, [username])
@@ -36,7 +38,7 @@ export function ReviewList({ username, showAverage = true }: ReviewListProps) {
   const fetchReviews = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/v1/reviews/${username}`, {
+      const response = await fetch(`${apiUrl}/api/v1/reviews/${username}`, {
         credentials: 'include',
       })
 

@@ -91,7 +91,7 @@ export function MyEvents() {
             </div>
           )}
         </div>
-        <Link to="/events/$eventId" params={{ eventId: event.id.toString() }}>
+  <Link to="/auth/events/$id" params={{ id: event.id.toString() }}>
           <Button className="w-full mt-4" variant="outline" size="sm">
             Ver Detalles
           </Button>
@@ -127,7 +127,7 @@ export function MyEvents() {
             <p className="text-sm text-blue-900">"{invitation.message}"</p>
           </div>
         )}
-        <Link to="/events/$eventId" params={{ eventId: invitation.event.id.toString() }}>
+  <Link to="/auth/events/$id" params={{ id: invitation.event.id.toString() }}>
           <Button className="w-full" size="sm">
             Ver Invitación
           </Button>
@@ -174,7 +174,7 @@ export function MyEvents() {
               <CardContent className="py-12 text-center">
                 <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 mb-4">Aún no has creado ningún evento</p>
-                <Link to="/events/create">
+                <Link to="/auth/events/create">
                   <Button>Crear Primer Evento</Button>
                 </Link>
               </CardContent>
@@ -195,7 +195,7 @@ export function MyEvents() {
               <CardContent className="py-12 text-center">
                 <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 mb-4">No has confirmado asistencia a ningún evento</p>
-                <Link to="/events">
+                <Link to="/auth/events">
                   <Button>Explorar Eventos</Button>
                 </Link>
               </CardContent>

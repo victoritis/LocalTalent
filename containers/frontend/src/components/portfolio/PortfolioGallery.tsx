@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,14 +22,65 @@ interface PortfolioItem {
 }
 
 interface PortfolioGalleryProps {
-  items: PortfolioItem[]
+  username: string
   isOwner?: boolean
   onDelete?: (id: number) => void
 }
 
-export function PortfolioGallery({ items, isOwner = false, onDelete }: PortfolioGalleryProps) {
+export function PortfolioGallery({ username, isOwner = false, onDelete }: PortfolioGalleryProps) {
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [items, setItems] = useState<PortfolioItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
+
+  useEffect(() => {
+    fetchPortfolio()
+  }, [username])
+
+  const fetchPortfolio = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${apiUrl}/api/v1/portfolio/${username}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cargar el portfolio')
+      }
+
+      const data = await response.json()
+      setItems(data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">
+            Cargando portfolio...
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-destructive">{error}</div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (!items || items.length === 0) {
     return (

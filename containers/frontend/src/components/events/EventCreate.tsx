@@ -101,7 +101,7 @@ export function EventCreate() {
 
       const response = await createEvent(dataToSend)
       toast.success('Evento creado correctamente')
-      navigate({ to: '/events/$eventId', params: { eventId: response.event.id.toString() } })
+  navigate({ to: '/auth/events/$id', params: { id: response.event.id.toString() } })
     } catch (error: any) {
       console.error('Error creating event:', error)
       toast.error(error.response?.data?.error || 'Error al crear el evento')

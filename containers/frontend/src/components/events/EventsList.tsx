@@ -112,7 +112,7 @@ export function EventsList() {
         )}
       </CardContent>
       <CardFooter>
-        <Link to="/events/$eventId" params={{ eventId: event.id.toString() }} className="w-full">
+        <Link to="/auth/events/$id" params={{ id: event.id.toString() }} className="w-full">
           <Button className="w-full">Ver detalles</Button>
         </Link>
       </CardFooter>
@@ -134,7 +134,7 @@ export function EventsList() {
           <h1 className="text-3xl font-bold mb-2">Eventos</h1>
           <p className="text-gray-600">Descubre eventos de networking y colaboración cerca de ti</p>
         </div>
-        <Link to="/events/create">
+        <Link to="/auth/events/create">
           <Button>Crear Evento</Button>
         </Link>
       </div>

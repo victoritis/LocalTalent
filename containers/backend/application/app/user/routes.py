@@ -366,7 +366,7 @@ def get_user_portfolio(username):
     """Obtener portfolio público de un usuario"""
     try:
         user = User.query.filter(
-            User.email.like(f"{username}@%"),
+            User.username == username,
             User.is_enabled == True,
             User.deletedAt.is_(None)
         ).first()
@@ -392,7 +392,7 @@ def get_user_portfolio(username):
                 'created_at': item.createdAt.isoformat() if item.createdAt else None
             })
 
-        return jsonify({'items': items_data}), 200
+        return jsonify(items_data), 200
     except Exception as e:
         logger.getChild('user').error(f"Error obteniendo portfolio público: {str(e)}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500

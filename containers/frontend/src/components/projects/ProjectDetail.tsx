@@ -187,7 +187,7 @@ export function ProjectDetail() {
                 </div>
                 {isCreator && (
                   <div className="flex gap-2">
-                    <Link to="/projects/$projectId/edit" params={{ projectId: projectId! }}>
+                    <Link to="/auth/projects/$id" params={{ id: projectId! }}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4 mr-1" />
                         Editar
