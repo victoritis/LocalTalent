@@ -20,8 +20,8 @@ function LoginPage() {
       </div>
       <div className="relative hidden bg-muted lg:block">
         <img
-          src="/images/cve-sentinel.png"
-          alt="Image"
+          src="/avatar/admin.jpg"
+          alt="Admin avatar"
           className="absolute top-0 inset-0 h-full w-full object-cover -translate-y-[60px] dark:brightness-[0.2] dark:grayscale"
         />
       </div>
