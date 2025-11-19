@@ -5,6 +5,7 @@ from app.models import User, JWTToken
 from app import db
 from app.auth.email import send_password_reset_email, send_create_account_email
 import random, string
+import pyotp
 from datetime import datetime, timezone
 from sqlalchemy.exc import SQLAlchemyError
 from app.logger_config import logger
@@ -303,8 +304,8 @@ def recover_password():
 
         email = data['email']
         
-        # Buscar al usuario por su email
-        user = User.query.filter_by(email=email).first()
+        # Buscar al usuario por su email (excluir eliminados)
+        user = User.query.filter_by(email=email, deletedAt=None).first()
 
         if not user:
             # No se encontró un usuario con ese email
@@ -319,6 +320,64 @@ def recover_password():
         # Manejar cualquier error inesperado
         logger.getChild('auth').error(f"Error en recuperación de contraseña: {str(e)}", exc_info=True)
         return jsonify({"message": "Error interno del servidor", "code": "internal_server_error"}), 500
+
+
+@bp.route('/api/v1/register', methods=['POST'])
+def register():
+    """Permite solicitar un enlace de registro sin necesitar un token previo."""
+    try:
+        data = request.get_json() or {}
+        email = data.get('email', '').strip().lower()
+
+        if not email:
+            logger.getChild('auth').warning("Solicitud de registro sin email válido")
+            return jsonify({"msg": "El campo 'email' es obligatorio"}), 400
+
+        user = User.query.filter_by(email=email, deletedAt=None).first()
+
+        if user:
+            if user.is_enabled:
+                logger.getChild('auth').info(f"Intento de registro con email ya activo: {email}")
+                return jsonify({"msg": "Este email ya tiene una cuenta activa. Inicia sesión o recupera tu contraseña."}), 400
+
+            logger.getChild('auth').info(f"Reenvío de enlace de registro para usuario pendiente: {email}")
+
+            if not user.otp_secret:
+                user.otp_secret = pyotp.random_base32()
+
+            if not user.password_hash:
+                random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                user.set_password(random_password)
+
+            db.session.commit()
+            send_create_account_email(user)
+            return jsonify({"msg": "Ya existe un registro pendiente. Revisa tu correo para continuar."}), 200
+
+        random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+        new_user = User(
+            email=email,
+            first_name="",
+            last_name="",
+            is_enabled=False,
+        )
+        new_user.set_password(random_password)
+        new_user.otp_secret = pyotp.random_base32()
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        send_create_account_email(new_user)
+        logger.getChild('auth').info(f"Usuario pendiente creado y correo enviado: {email}")
+        return jsonify({"msg": "Registro iniciado. Revisa tu correo para continuar con la activación."}), 201
+
+    except SQLAlchemyError as e:
+        logger.getChild('auth').error(f"Error de base de datos en registro: {str(e)}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"msg": "Error al crear la cuenta. Inténtalo nuevamente."}), 500
+    except Exception as e:
+        logger.getChild('auth').error(f"Error inesperado en registro: {str(e)}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"msg": "Error interno del servidor"}), 500
 
 
 @bp.route('/api/v1/register-step1/<token>', methods=['POST'])
@@ -369,8 +428,8 @@ def register_step1(token):
             base_username = user.email.split('@')[0]
             username = base_username
             counter = 1
-            # Asegurar que el username sea único
-            while User.query.filter_by(username=username).first():
+            # Asegurar que el username sea único (excluir usuarios eliminados)
+            while User.query.filter_by(username=username, deletedAt=None).first():
                 username = f"{base_username}{counter}"
                 counter += 1
             user.username = username

@@ -113,7 +113,7 @@ def get_blocked_users():
                     'user': {
                         'id': block.blocked.id,
                         'name': f"{block.blocked.first_name} {block.blocked.last_name}",
-                        'username': block.blocked.email.split('@')[0] if block.blocked.email else None,
+                        'username': block.blocked.username,
                         'image': block.blocked.profile_image
                     },
                     'reason': block.reason,
@@ -258,7 +258,7 @@ def get_my_reports():
                     'reported_user': {
                         'id': report.reported.id,
                         'name': f"{report.reported.first_name} {report.reported.last_name}",
-                        'username': report.reported.email.split('@')[0] if report.reported.email else None
+                        'username': report.reported.username
                     },
                     'reason': report.reason,
                     'description': report.description,
@@ -308,12 +308,12 @@ def get_all_reports():
                 'reporter': {
                     'id': report.reporter.id,
                     'name': f"{report.reporter.first_name} {report.reporter.last_name}",
-                    'username': report.reporter.email.split('@')[0] if report.reporter.email else None
+                    'username': report.reporter.username
                 },
                 'reported': {
                     'id': report.reported.id,
                     'name': f"{report.reported.first_name} {report.reported.last_name}",
-                    'username': report.reported.email.split('@')[0] if report.reported.email else None
+                    'username': report.reported.username
                 },
                 'reason': report.reason,
                 'description': report.description,
@@ -525,7 +525,7 @@ def get_all_verifications():
                 'user': {
                     'id': verification.user.id,
                     'name': f"{verification.user.first_name} {verification.user.last_name}",
-                    'username': verification.user.email.split('@')[0] if verification.user.email else None,
+                    'username': verification.user.username,
                     'email': verification.user.email,
                     'category': verification.user.category
                 },
@@ -621,6 +621,7 @@ def get_privacy_settings():
         return jsonify({
             'is_profile_public': current_user.is_profile_public,
             'show_exact_location': current_user.show_exact_location,
+            'email_notifications': current_user.email_notifications,
             'is_verified': current_user.is_verified
         }), 200
 
@@ -642,13 +643,17 @@ def update_privacy_settings():
         if 'show_exact_location' in data:
             current_user.show_exact_location = data['show_exact_location']
 
+        if 'email_notifications' in data:
+            current_user.email_notifications = data['email_notifications']
+
         db.session.commit()
 
         return jsonify({
             'message': 'Configuración actualizada correctamente',
             'settings': {
                 'is_profile_public': current_user.is_profile_public,
-                'show_exact_location': current_user.show_exact_location
+                'show_exact_location': current_user.show_exact_location,
+                'email_notifications': current_user.email_notifications
             }
         }), 200
 
