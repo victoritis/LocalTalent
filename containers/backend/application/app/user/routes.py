@@ -8,6 +8,9 @@ import os
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_, and_
 import math
+from app.auth.email import send_delete_account_email
+from flask_login import logout_user
+from datetime import datetime, timezone
 
 # Minimal user blueprint: only session info retained
 
@@ -96,7 +99,11 @@ def update_my_profile():
         if 'last_name' in data:
             user.last_name = data['last_name']
         if 'bio' in data:
-            user.bio = data['bio']
+            bio = data['bio']
+            # Validar límite de caracteres en bio
+            if bio and len(bio) > 500:
+                return jsonify({'error': 'La biografía no puede exceder 500 caracteres'}), 400
+            user.bio = bio
         if 'skills' in data:
             user.skills = data['skills'] if isinstance(data['skills'], list) else []
         if 'category' in data:
@@ -202,6 +209,49 @@ def get_public_profile(username):
         return jsonify({'error': 'Error interno'}), 500
 
 
+@bp.route('/api/v1/profile/request-deletion', methods=['POST'])
+@login_required
+def request_deletion():
+    """Solicitar eliminación de cuenta (envía email)"""
+    try:
+        user = current_user
+        send_delete_account_email(user)
+        return jsonify({'message': 'Se ha enviado un correo de confirmación para eliminar tu cuenta'}), 200
+    except Exception as e:
+        logger.getChild('user').error(f"Error solicitando eliminación de cuenta: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno al procesar la solicitud'}), 500
+
+
+@bp.route('/api/v1/profile/confirm-deletion', methods=['POST'])
+def confirm_deletion():
+    """Confirmar eliminación de cuenta con token"""
+    try:
+        data = request.get_json()
+        token = data.get('token')
+
+        if not token:
+            return jsonify({'error': 'Token no proporcionado'}), 400
+
+        user = User.verify_delete_account_token(token)
+        if not user:
+            return jsonify({'error': 'Token inválido o expirado'}), 400
+
+        # Realizar soft delete
+        user.deletedAt = datetime.now(timezone.utc)
+        user.is_enabled = False
+        
+        # Cerrar sesión si es el usuario actual
+        if current_user.is_authenticated and current_user.id == user.id:
+            logout_user()
+
+        db.session.commit()
+
+        return jsonify({'message': 'Tu cuenta ha sido eliminada correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error confirmando eliminación de cuenta: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno al eliminar la cuenta'}), 500
+
 @bp.route('/api/v1/profile/upload-image', methods=['POST'])
 @login_required
 def upload_profile_image():
@@ -214,6 +264,14 @@ def upload_profile_image():
 
         if file.filename == '':
             return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+
+        # Validar tamaño de archivo (5MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        if file_size > 5 * 1024 * 1024:
+            return jsonify({'error': 'El archivo excede el tamaño máximo permitido de 5MB'}), 400
 
         # Validar extensión
         allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}

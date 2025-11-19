@@ -247,6 +247,13 @@ def delete(target):
 # Modelo User
 class User(Base, UserMixin):
     __tablename__ = 'user'
+    __table_args__ = (
+        db.Index('idx_user_category', 'category'),
+        db.Index('idx_user_public_profile', 'is_profile_public'),
+        db.Index('idx_user_location', 'latitude', 'longitude'),
+        db.Index('idx_user_city_country', 'city', 'country'),
+        db.Index('idx_user_skills', 'skills', postgresql_using='gin'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
@@ -366,6 +373,29 @@ class User(Base, UserMixin):
             return None
         found_user = db.session.query(User).filter_by(email=email).first()
         return found_user
+
+    def get_delete_account_token(self, expires_in=600):
+        """
+        Genera un token JWT para confirmar la eliminación de la cuenta.
+        Expira en 10 minutos (600 segundos).
+        """
+        return jwt.encode(
+            {'delete_account': self.id, 'exp': datetime.now(timezone.utc) + timedelta(seconds=expires_in)},
+            current_app.config['SECRET_KEY'],
+            algorithm='HS256'
+        )
+
+    @staticmethod
+    def verify_delete_account_token(token):
+        """
+        Verifica el token de eliminación de cuenta.
+        """
+        try:
+            id = jwt.decode(token, current_app.config['SECRET_KEY'],
+                            algorithms=['HS256'])['delete_account']
+        except Exception:
+            return None
+        return db.session.get(User, id)
     
     # Métodos relacionados con organizaciones eliminados
 

@@ -198,6 +198,21 @@ function MyProfile() {
     setSkills(skills.filter(s => s !== skillToRemove))
   }
 
+  const handleAddPortfolioItem = async (formData: FormData) => {
+    const response = await fetch(`${apiUrl}/api/v1/portfolio`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Error al crear item')
+    }
+
+    fetchProfile()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -284,7 +299,13 @@ function MyProfile() {
                 disabled={!editMode}
                 placeholder="Cuéntanos sobre ti..."
                 rows={4}
+                className={bio.length > 500 ? 'border-destructive focus-visible:ring-destructive' : ''}
               />
+              <div className="flex justify-end mt-1">
+                <span className={`text-xs ${bio.length > 500 ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                  {bio.length}/500 caracteres
+                </span>
+              </div>
             </div>
           </div>
 
@@ -377,7 +398,7 @@ function MyProfile() {
               </Button>
             ) : (
               <>
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving || bio.length > 500}>
                   {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Guardar Cambios
                 </Button>
@@ -399,11 +420,60 @@ function MyProfile() {
                 <CardTitle>Mi Portfolio</CardTitle>
                 <CardDescription>Muestra tus trabajos y proyectos</CardDescription>
               </div>
-              <AddPortfolioItem onPortfolioUpdated={fetchProfile} />
+              <AddPortfolioItem onAdd={handleAddPortfolioItem} />
             </div>
           </CardHeader>
           <CardContent>
             <PortfolioGallery username={profile.username} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="mt-6">
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
+            <CardDescription>Acciones irreversibles para tu cuenta</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+              <div>
+                <h4 className="font-medium text-destructive">Eliminar Cuenta</h4>
+                <p className="text-sm text-muted-foreground">
+                  Se enviará un correo de confirmación para eliminar permanentemente tu cuenta y todos tus datos.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (confirm('¿Estás seguro de que quieres eliminar tu cuenta? Se enviará un correo de confirmación.')) {
+                    try {
+                      const response = await fetch(`${apiUrl}/api/v1/profile/request-deletion`, {
+                        method: 'POST',
+                        credentials: 'include'
+                      })
+                      if (response.ok) {
+                        toast({
+                          title: 'Correo enviado',
+                          description: 'Revisa tu bandeja de entrada para confirmar la eliminación.'
+                        })
+                      } else {
+                        throw new Error('Error al solicitar eliminación')
+                      }
+                    } catch (error) {
+                      toast({
+                        title: 'Error',
+                        description: 'No se pudo procesar la solicitud',
+                        variant: 'destructive'
+                      })
+                    }
+                  }
+                }}
+              >
+                Eliminar Cuenta
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

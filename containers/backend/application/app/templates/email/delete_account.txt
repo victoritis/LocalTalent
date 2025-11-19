@@ -1,0 +1,12 @@
+Hola {{ user.first_name }},
+
+Hemos recibido una solicitud para eliminar tu cuenta en LocalTalent.
+
+Para confirmar esta acción, por favor visita el siguiente enlace:
+
+{{ delete_url }}
+
+Si no has solicitado esto, por favor ignora este mensaje.
+
+Atentamente,
+El equipo de LocalTalent
