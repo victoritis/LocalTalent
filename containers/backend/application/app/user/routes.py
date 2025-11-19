@@ -16,7 +16,7 @@ import math
 def session_info():
     try:
         user = current_user
-        username = user.email.split('@')[0] if user and user.email else None
+        username = user.username if user else None
         return jsonify({
             'user_id': user.id,
             'email': user.email,
@@ -57,7 +57,7 @@ def get_my_profile():
     """Obtener el perfil completo del usuario autenticado (vista privada)"""
     try:
         user = current_user
-        username = user.email.split('@')[0] if user.email else None
+        username = user.username
 
         return jsonify({
             'id': user.id,
@@ -114,7 +114,7 @@ def update_my_profile():
 
         db.session.commit()
 
-        username = user.email.split('@')[0] if user.email else None
+        username = user.username
 
         return jsonify({
             'message': 'Perfil actualizado correctamente',
@@ -270,7 +270,7 @@ def get_users_for_map():
 
         users_data = []
         for user in users:
-            username = user.email.split('@')[0] if user.email else None
+            username = user.username
 
             # Determinar qué ubicación mostrar según configuración de privacidad
             if user.show_exact_location:
@@ -593,10 +593,12 @@ def advanced_search():
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 100)
 
-        # Base query: Solo usuarios habilitados con ubicación
+
+        # Base query: Solo usuarios habilitados con ubicación y perfil público
         base_query = User.query.filter(
             User.is_enabled == True,
             User.deletedAt.is_(None),
+            User.is_profile_public == True,  # Solo perfiles públicos en búsquedas
             User.latitude.isnot(None),
             User.longitude.isnot(None)
         )
@@ -632,7 +634,7 @@ def advanced_search():
         for user in users:
             user_data = {
                 'id': user.id,
-                'username': user.email.split('@')[0] if user.email else None,
+                'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'profile_image': user.profile_image,
