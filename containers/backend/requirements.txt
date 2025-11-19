@@ -19,6 +19,7 @@ sqlalchemy-utils
 requests
 flask-socketio
 python-socketio
+eventlet
 flask-limiter
 py-vapid
 pywebpush

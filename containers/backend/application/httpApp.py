@@ -3,6 +3,10 @@ from flask import request
 from app import create_app, db, socketio
 from datetime import datetime, timezone
 import click # Importar click para comandos CLI
+import eventlet
+
+# Patch socket antes de crear la app para mejor compatibilidad con eventlet
+eventlet.monkey_patch()
 
 app = create_app()      
 

@@ -40,7 +40,7 @@ export function ChatWindow({ conversationId, otherUser, onBack }: ChatWindowProp
   const normalizeMessage = useCallback(
     (msg: Message): Message => ({
       ...msg,
-      is_mine: msg.sender_id !== otherUser.id,
+      is_mine: msg.sender_id === otherUser.id ? false : true,
     }),
     [otherUser.id]
   );

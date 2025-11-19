@@ -59,10 +59,10 @@ main() {
     
     wait_for_db
     apply_migrations || echo "Hubo problemas con las migraciones, pero continuamos..."
-    echo "Iniciando aplicación con Gunicorn (servidor de producción)..."
+    echo "Iniciando aplicación con Gunicorn + Eventlet (soporte WebSockets)..."
     
-    # Usa Gunicorn en lugar del servidor de desarrollo de Flask
-    exec gunicorn --workers=4 --bind=0.0.0.0:5000 "httpApp:app"
+    # Usa Gunicorn con eventlet para soporte de WebSockets/Socket.IO
+    exec gunicorn --workers=1 --worker-class=eventlet --bind=0.0.0.0:5000 "httpApp:app"
 }
 
 main "$@"
