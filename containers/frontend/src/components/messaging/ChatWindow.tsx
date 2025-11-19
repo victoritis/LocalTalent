@@ -1,13 +1,18 @@
-import { useState, useEffect, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowLeft, Send, Loader2 } from 'lucide-react'
-import { MessageBubble } from './MessageBubble'
-import { useSocket } from '@/context/socket'
-import { getMessages, markMessagesAsRead, Message } from '@/services/messaging/messagingApi'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, Send, Loader2 } from "lucide-react";
+import { MessageBubble } from "./MessageBubble";
+import { useSocket } from "@/context/socket";
+import {
+  getMessages,
+  markMessagesAsRead,
+  Message,
+  sendMessage as sendMessageApi,
+} from "@/services/messaging/messagingApi";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatWindowProps {
   conversationId: number
@@ -22,156 +27,170 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ conversationId, otherUser, onBack }: ChatWindowProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [inputValue, setInputValue] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
-  const { socket, connected, joinConversation, leaveConversation, sendMessage, sendTyping } = useSocket()
-  const { toast } = useToast()
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const { socket, connected, joinConversation, leaveConversation, sendMessage, sendTyping } = useSocket();
+  const { toast } = useToast();
+
+  const normalizeMessage = useCallback(
+    (msg: Message): Message => ({
+      ...msg,
+      is_mine: msg.sender_id !== otherUser.id,
+    }),
+    [otherUser.id]
+  );
 
   // Cargar mensajes iniciales
   useEffect(() => {
     const loadMessages = async () => {
       try {
-        setLoading(true)
-        const data = await getMessages(conversationId)
-        setMessages(data.messages)
+        setLoading(true);
+  const data = await getMessages(conversationId);
+  setMessages(data.messages.map(normalizeMessage));
 
         // Marcar mensajes como leídos
-        await markMessagesAsRead(conversationId)
+        await markMessagesAsRead(conversationId);
       } catch (error) {
-        console.error('Error cargando mensajes:', error)
+        console.error("Error cargando mensajes:", error);
         toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los mensajes',
-          variant: 'destructive',
-        })
+          title: "Error",
+          description: "No se pudieron cargar los mensajes",
+          variant: "destructive",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadMessages()
-  }, [conversationId])
+    loadMessages();
+  }, [conversationId, normalizeMessage]);
 
   // Unirse a la conversación por WebSocket
   useEffect(() => {
     if (connected && socket) {
-      joinConversation(conversationId)
+      joinConversation(conversationId);
 
       // Escuchar nuevos mensajes
-      socket.on('new_message', (data: any) => {
+      socket.on("new_message", (data: any) => {
         if (data.conversation_id === conversationId) {
-          setMessages((prev) => [...prev, data])
+          const normalized = normalizeMessage(data as Message);
+          setMessages((prev) => [...prev, normalized]);
 
           // Auto-scroll al final
-          scrollToBottom()
+          scrollToBottom();
 
           // Marcar como leído si no es mío
           if (!data.is_mine) {
-            markMessagesAsRead(conversationId)
+            markMessagesAsRead(conversationId);
           }
         }
-      })
+      });
 
       // Escuchar indicador de escritura
-      socket.on('user_typing', (data: any) => {
+      socket.on("user_typing", (data: any) => {
         if (data.conversation_id === conversationId && data.user_id === otherUser.id) {
-          setIsTyping(data.is_typing)
+          setIsTyping(data.is_typing);
         }
-      })
+      });
 
       // Escuchar mensajes leídos
-      socket.on('message_read', (data: any) => {
+      socket.on("message_read", (data: any) => {
         if (data.conversation_id === conversationId) {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === data.message_id ? { ...msg, is_read: true } : msg
             )
-          )
+          );
         }
-      })
+      });
 
       return () => {
-        leaveConversation(conversationId)
-        socket.off('new_message')
-        socket.off('user_typing')
-        socket.off('message_read')
-      }
+        leaveConversation(conversationId);
+        socket.off("new_message");
+        socket.off("user_typing");
+        socket.off("message_read");
+      };
     }
-  }, [connected, socket, conversationId, otherUser.id])
+  }, [connected, socket, conversationId, otherUser.id, normalizeMessage, joinConversation, leaveConversation]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      const scrollElement = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]");
       if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight
+        scrollElement.scrollTop = scrollElement.scrollHeight;
       }
     }
-  }
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const content = inputValue.trim()
-    if (!content || sending) return
+    const content = inputValue.trim();
+    if (!content || sending) return;
 
-    setSending(true)
+    setSending(true);
     try {
       if (connected && socket) {
         // Enviar por WebSocket
-        sendMessage(conversationId, content)
+        sendMessage(conversationId, content);
       } else {
         // Fallback a REST API
+        const savedMessage = await sendMessageApi(conversationId, { content });
+        const normalized = normalizeMessage(savedMessage);
+        setMessages((prev) => [...prev, normalized]);
+        scrollToBottom();
+
         toast({
-          title: 'Advertencia',
-          description: 'Conexión en tiempo real no disponible. El mensaje se enviará cuando la conexión se restablezca.',
-        })
+          title: "Mensaje enviado",
+          description: "Se envió usando el modo seguro porque la conexión en tiempo real no está disponible.",
+        });
       }
 
-      setInputValue('')
+      setInputValue("");
 
       // Detener indicador de escritura
       if (connected) {
-        sendTyping(conversationId, false)
+        sendTyping(conversationId, false);
       }
     } catch (error) {
-      console.error('Error enviando mensaje:', error)
+      console.error("Error enviando mensaje:", error);
       toast({
-        title: 'Error',
-        description: 'No se pudo enviar el mensaje',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "No se pudo enviar el mensaje",
+        variant: "destructive",
+      });
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value)
+    setInputValue(e.target.value);
 
     if (connected) {
       // Enviar indicador de escritura
-      sendTyping(conversationId, true)
+      sendTyping(conversationId, true);
 
       // Detener indicador después de 2 segundos de inactividad
       if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
+        clearTimeout(typingTimeoutRef.current);
       }
       typingTimeoutRef.current = setTimeout(() => {
-        sendTyping(conversationId, false)
-      }, 2000)
+        sendTyping(conversationId, false);
+      }, 2000);
     }
-  }
+  };
 
-  const initials = `${otherUser.first_name?.[0] || ''}${otherUser.last_name?.[0] || ''}`.toUpperCase()
+  const initials = `${otherUser.first_name?.[0] || ""}${otherUser.last_name?.[0] || ""}`.toUpperCase();
 
   return (
     <div className="flex flex-col h-full">
@@ -253,5 +272,5 @@ export function ChatWindow({ conversationId, otherUser, onBack }: ChatWindowProp
         </div>
       </form>
     </div>
-  )
+  );
 }

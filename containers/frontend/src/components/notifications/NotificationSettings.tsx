@@ -26,6 +26,7 @@ export function NotificationSettings() {
     push_notifications: false,
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -38,13 +39,21 @@ export function NotificationSettings() {
       // Prefer server-side subscription status if available
       let pushServerStatus = null
       try {
-        const serverStatus = await getSubscriptionStatus()
+        // Timeout wrapper to avoid blocking on service worker responses
+        const serverStatus = await Promise.race([
+          getSubscriptionStatus(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+        ])
         pushServerStatus = serverStatus?.is_subscribed ?? null
       } catch (err) {
         // no-op: fallback to local push state
       }
 
-      const isPushLocal = await isPushSubscribed()
+      // Evitar bloqueo indefinido: si el chequeo local tarda más de 3s, asumimos false
+      const isPushLocal = await Promise.race([
+        isPushSubscribed(),
+        new Promise<boolean>((res) => setTimeout(() => res(false), 3000)),
+      ])
 
       setPreferences({
         email_notifications: !!data?.email_notifications,
@@ -53,6 +62,7 @@ export function NotificationSettings() {
     } catch (error) {
       console.error('Error cargando preferencias:', error)
       toast.error('Error al cargar las preferencias de notificaciones')
+      setLoadError('Error cargando preferencias de notificaciones')
     } finally {
       setIsLoading(false)
     }
@@ -60,6 +70,7 @@ export function NotificationSettings() {
 
   const handleEmailToggle = async () => {
     setIsSaving(true)
+    setLoadError(null)
     try {
       const newValue = !preferences.email_notifications
 
@@ -77,6 +88,7 @@ export function NotificationSettings() {
 
   const handlePushToggle = async () => {
     setIsSaving(true)
+    setLoadError(null)
     try {
       const newValue = !preferences.push_notifications
 
@@ -105,6 +117,7 @@ export function NotificationSettings() {
     } catch (error) {
       console.error('Error con push notifications:', error)
       toast.error('Error al gestionar las notificaciones push')
+      setLoadError('Error al gestionar notificaciones push')
     } finally {
       setIsSaving(false)
     }
@@ -121,6 +134,7 @@ export function NotificationSettings() {
     } catch (error) {
       console.error('Error enviando notificación de prueba:', error)
       toast.error('Error al enviar la notificación de prueba')
+      setLoadError('Error enviando notificación de prueba')
     }
   }
 
@@ -131,6 +145,24 @@ export function NotificationSettings() {
           <CardTitle>Notificaciones</CardTitle>
           <CardDescription>Cargando preferencias...</CardDescription>
         </CardHeader>
+      </Card>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Notificaciones</CardTitle>
+          <CardDescription>{loadError}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Button onClick={() => { setIsLoading(true); setLoadError(null); loadPreferences(); }}>
+              Reintentar
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     )
   }

@@ -912,10 +912,20 @@ def send_event_message(event_id):
         db.session.add(message)
         db.session.commit()
 
+        # Preparar datos del sender para la respuesta
+        sender = message.sender
+        sender_username = sender.email.split('@')[0] if sender and sender.email else None
+
         return jsonify({
             'message': 'Mensaje enviado correctamente',
             'event_message': {
                 'id': message.id,
+                'sender': {
+                    'id': sender.id if sender else None,
+                    'name': f"{sender.first_name} {sender.last_name}" if sender else None,
+                    'username': sender_username,
+                    'image': sender.profile_image if sender else None
+                },
                 'content': message.content,
                 'created_at': message.createdAt.isoformat() if message.createdAt else None
             }

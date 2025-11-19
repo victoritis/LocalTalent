@@ -1,4 +1,6 @@
 import { LoginForm } from "@/components/login/LoginForm";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 
 // Componente que renderiza el login
@@ -15,6 +17,12 @@ function LoginPage() {
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
             <LoginForm />
+            <div className="mt-6 text-center">
+              <span className="text-sm text-muted-foreground mr-2">¿No tienes una cuenta?</span>
+              <Button variant="link" size="sm" asChild>
+                <Link to="/register/create-account">Crear cuenta</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

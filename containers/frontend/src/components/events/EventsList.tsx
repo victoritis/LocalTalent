@@ -1,48 +1,48 @@
-import { useState, useEffect } from 'react'
-import { Link } from '@tanstack/react-router'
-import { getEvents, getNearbyEvents, Event } from '@/services/events/eventsApi'
-import { Calendar, MapPin, Users, Video, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState, useEffect } from "react";
+import { Link } from "@tanstack/react-router";
+import { getEvents, getNearbyEvents, Event } from "@/services/events/eventsApi";
+import { Calendar, MapPin, Users, Video, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function EventsList() {
-  const [events, setEvents] = useState<Event[]>([])
-  const [nearbyEvents, setNearbyEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('all')
+  const [events, setEvents] = useState<Event[]>([]);
+  const [nearbyEvents, setNearbyEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
-    loadEvents()
-  }, [])
+    loadEvents();
+  }, []);
 
   const loadEvents = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const [allEventsData, nearbyData] = await Promise.all([
         getEvents({ upcoming_only: true, per_page: 20 }),
         getNearbyEvents({ radius: 50 }).catch(() => ({ events: [], total: 0, radius_km: 0 })),
-      ])
-      setEvents(allEventsData.events)
-      setNearbyEvents(nearbyData.events)
+      ]);
+      setEvents(allEventsData.events);
+      setNearbyEvents(nearbyData.events);
     } catch (error) {
-      console.error('Error loading events:', error)
+      console.error("Error loading events:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const EventCard = ({ event }: { event: Event }) => (
     <Card className="hover:shadow-lg transition-shadow">
@@ -60,8 +60,8 @@ export function EventsList() {
               </span>
             </CardDescription>
           </div>
-          <Badge variant={event.is_full ? 'destructive' : 'default'}>
-            {event.is_full ? 'Completo' : 'Disponible'}
+          <Badge variant={event.is_full ? "destructive" : "default"}>
+            {event.is_full ? "Completo" : "Disponible"}
           </Badge>
         </div>
       </CardHeader>
@@ -93,12 +93,12 @@ export function EventsList() {
             <Users className="h-4 w-4" />
             <span>
               {event.confirmed_attendees}
-              {event.max_attendees ? ` / ${event.max_attendees}` : ''} asistentes
+              {event.max_attendees ? ` / ${event.max_attendees}` : ""} asistentes
             </span>
           </div>
           <div className="flex items-center gap-2">
             <img
-              src={event.creator.image || '/static/default_profile.png'}
+              src={event.creator.image || "/static/default_profile.png"}
               alt={event.creator.name}
               className="h-6 w-6 rounded-full"
             />
@@ -117,14 +117,14 @@ export function EventsList() {
         </Link>
       </CardFooter>
     </Card>
-  )
+  );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Clock className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
@@ -183,5 +183,5 @@ export function EventsList() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

@@ -152,7 +152,10 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
       return false
     }
 
-    const registration = await navigator.serviceWorker.ready
+  // Use getRegistration (non-blocking) so we don't hang if the service worker
+  // is not registered. navigator.serviceWorker.ready can wait indefinitely
+  // in some dev setups and block UI loading.
+  const registration = await navigator.serviceWorker.getRegistration()
     const subscription = await registration.pushManager.getSubscription()
 
     if (subscription) {
@@ -179,8 +182,9 @@ export async function isPushSubscribed(): Promise<boolean> {
     if (!isPushNotificationSupported()) {
       return false
     }
-
-    const registration = await navigator.serviceWorker.ready
+    // Prefer getRegistration to avoid waiting for ready.
+    const registration = await navigator.serviceWorker.getRegistration()
+    if (!registration) return false
     const subscription = await registration.pushManager.getSubscription()
 
     return subscription !== null

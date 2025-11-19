@@ -45,8 +45,13 @@ export function CreateAccountStep1({
     setLoading(true);
   
     try {
+      // Si no hay token en la query string, no intentamos llamar la API que requiere token
+      if (!token) {
+        onTokenError("Token inválido o faltante. Revisa el enlace de invitación o solicita uno nuevo.");
+        return;
+      }
       const response = await fetch(
-        `${apiUrl}/api/v1/register-step1/${token}`, 
+        `${apiUrl}/api/v1/register-step1/${token}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

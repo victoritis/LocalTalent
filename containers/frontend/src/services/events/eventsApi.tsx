@@ -75,7 +75,7 @@ export interface EventMessage {
     id: number
     name: string
     username: string
-    image: string
+    image?: string
   }
   content: string
   created_at: string

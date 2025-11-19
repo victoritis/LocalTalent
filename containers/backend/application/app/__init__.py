@@ -19,7 +19,15 @@ migrate = Migrate()
 login = LoginManager()
 login.login_message = "Por favor, inicia sesión para acceder a esta página."
 mail = Mail()
-socketio = SocketIO(cors_allowed_origins=["https://localtalent.es", "https://api.localtalent.es"])
+socketio = SocketIO(cors_allowed_origins=[
+    "https://localtalent.es",
+    "https://api.localtalent.es",
+    # Development origins
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+])
 
 # Declaramos la variable celery a nivel de módulo
 celery = None
@@ -51,7 +59,12 @@ def create_app(config_class=Config):
         supports_credentials=True,
         resources={r"/*": {"origins": [
             "https://localtalent.es",
-            "https://api.localtalent.es"
+            "https://api.localtalent.es",
+            # Dev origins for local front-end (Vite default port 5173 or alternate 3000)
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
         ]}}
     )
 

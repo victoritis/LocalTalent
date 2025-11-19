@@ -122,8 +122,15 @@ export function EventDetail() {
 
     try {
       setSendingMessage(true)
-  const response = await sendEventMessage(Number(id), newMessage)
-      setMessages([...messages, response.event_message])
+      const response = await sendEventMessage(Number(id), newMessage)
+
+      // Si la respuesta no incluye sender (inconsistencia), recargar mensajes
+      if (!response.event_message.sender) {
+        const messagesData = await getEventMessages(Number(id))
+        setMessages(messagesData.messages)
+      } else {
+        setMessages([...messages, response.event_message])
+      }
       setNewMessage('')
     } catch (error: any) {
       console.error('Error sending message:', error)
@@ -354,12 +361,12 @@ export function EventDetail() {
                       messages.map((message) => (
                         <div key={message.id} className="flex gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender.image} />
-                            <AvatarFallback>{message.sender.name[0]}</AvatarFallback>
+                            <AvatarImage src={message.sender?.image} />
+                            <AvatarFallback>{message.sender?.name ? message.sender.name[0] : "?"}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-medium">{message.sender.name}</span>
+                              <span className="text-sm font-medium">{message.sender?.name || "Usuario"}</span>
                               <span className="text-xs text-gray-500">{formatMessageTime(message.created_at)}</span>
                             </div>
                             <p className="text-sm text-gray-700 mt-1">{message.content}</p>
