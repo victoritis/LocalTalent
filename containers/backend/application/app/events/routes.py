@@ -3,9 +3,15 @@ from flask_login import current_user, login_required
 from app.events import bp
 from app.logger_config import logger
 from app import db
+from app.cache import (
+    get_event_confirmed_count_cached,
+    set_event_confirmed_count_cached,
+    invalidate_event_confirmed_count,
+)
 from app.models import Event, EventRSVP, EventInvitation, EventMessage, User, Notification
 from datetime import datetime, timezone
 from sqlalchemy import func, and_, or_
+from sqlalchemy.orm import selectinload
 import math
 
 
@@ -22,6 +28,41 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.asin(math.sqrt(a))
 
     return R * c
+
+
+def haversine_km_sql(lat_col, lon_col, lat_val, lon_val):
+    """Fórmula Haversine en SQL (sin PostGIS).
+
+    Usa `acos(sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2-lon1)) * 6371`.
+    Recibe columnas SQLAlchemy y valores escalares, devuelve una expresión en km.
+    """
+    lat1 = func.radians(lat_col)
+    lat2 = func.radians(lat_val)
+    lon1 = func.radians(lon_col)
+    lon2 = func.radians(lon_val)
+    return (
+        func.acos(
+            func.sin(lat1) * func.sin(lat2)
+            + func.cos(lat1) * func.cos(lat2) * func.cos(lon2 - lon1)
+        ) * 6371.0
+    )
+
+
+def _confirmed_counts_for_events(event_ids):
+    """Devuelve {event_id: confirmed_count} agregado en UNA sola query."""
+    if not event_ids:
+        return {}
+    rows = (
+        db.session.query(EventRSVP.event_id, func.count(EventRSVP.id))
+        .filter(
+            EventRSVP.event_id.in_(event_ids),
+            EventRSVP.status == 'confirmed',
+            EventRSVP.deletedAt.is_(None),
+        )
+        .group_by(EventRSVP.event_id)
+        .all()
+    )
+    return {event_id: count for event_id, count in rows}
 
 
 # ==================== CRUD de Eventos ====================
@@ -41,8 +82,8 @@ def get_events():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
 
-        # Query base
-        query = Event.query.filter_by(
+        # Query base (precargando creator para evitar N+1)
+        query = Event.query.options(selectinload(Event.creator)).filter_by(
             is_public=True,
             deletedAt=None
         )
@@ -70,14 +111,12 @@ def get_events():
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         events = pagination.items
 
+        # Contadores agregados en una única query
+        counts_by_event = _confirmed_counts_for_events([e.id for e in events])
+
         events_data = []
         for event in events:
-            # Contar asistentes confirmados
-            confirmed_count = EventRSVP.query.filter_by(
-                event_id=event.id,
-                status='confirmed',
-                deletedAt=None
-            ).count()
+            confirmed_count = counts_by_event.get(event.id, 0)
 
             events_data.append({
                 'id': event.id,
@@ -133,68 +172,69 @@ def get_nearby_events():
         radius = float(request.args.get('radius', 50))  # Radio en km (default 50km)
         upcoming_only = request.args.get('upcoming_only', 'true').lower() == 'true'
 
-        # Obtener todos los eventos públicos
-        query = Event.query.filter_by(
-            is_public=True,
-            is_online=False,
-            deletedAt=None
-        ).filter(
-            Event.latitude.isnot(None),
-            Event.longitude.isnot(None)
+        # Obtener eventos públicos dentro del radio usando Haversine en SQL
+        distance_expr = haversine_km_sql(
+            Event.latitude,
+            Event.longitude,
+            current_user.latitude,
+            current_user.longitude,
+        ).label('distance')
+
+        query = (
+            db.session.query(Event, distance_expr)
+            .options(selectinload(Event.creator))
+            .filter(
+                Event.is_public.is_(True),
+                Event.is_online.is_(False),
+                Event.deletedAt.is_(None),
+                Event.latitude.isnot(None),
+                Event.longitude.isnot(None),
+            )
         )
 
         if upcoming_only:
             query = query.filter(Event.start_date >= datetime.now(timezone.utc))
 
-        events = query.all()
+        query = query.filter(distance_expr <= radius).order_by(distance_expr.asc())
 
-        # Filtrar por distancia
+        rows = query.all()
+        events = [row[0] for row in rows]
+        distances_by_event = {row[0].id: row[1] for row in rows}
+
+        counts_by_event = _confirmed_counts_for_events([e.id for e in events])
+
         nearby_events = []
         for event in events:
-            distance = calculate_distance(
-                current_user.latitude,
-                current_user.longitude,
-                event.latitude,
-                event.longitude
-            )
+            distance = distances_by_event.get(event.id, 0) or 0
+            confirmed_count = counts_by_event.get(event.id, 0)
 
-            if distance <= radius:
-                confirmed_count = EventRSVP.query.filter_by(
-                    event_id=event.id,
-                    status='confirmed',
-                    deletedAt=None
-                ).count()
-
-                nearby_events.append({
-                    'id': event.id,
-                    'title': event.title,
-                    'description': event.description,
-                    'event_type': event.event_type,
-                    'creator': {
-                        'id': event.creator.id,
-                        'name': f"{event.creator.first_name} {event.creator.last_name}",
-                        'username': event.creator.display_username,
-                        'image': event.creator.profile_image
-                    },
-                    'start_date': event.start_date.isoformat() if event.start_date else None,
-                    'end_date': event.end_date.isoformat() if event.end_date else None,
-                    'location': {
-                        'address': event.address,
-                        'city': event.city,
-                        'country': event.country,
-                        'latitude': event.latitude,
-                        'longitude': event.longitude
-                    },
-                    'distance': round(distance, 2),
-                    'max_attendees': event.max_attendees,
-                    'confirmed_attendees': confirmed_count,
-                    'is_full': event.max_attendees and confirmed_count >= event.max_attendees,
-                    'category': event.category,
-                    'image_url': event.image_url
-                })
-
-        # Ordenar por distancia
-        nearby_events.sort(key=lambda x: x['distance'])
+            nearby_events.append({
+                'id': event.id,
+                'title': event.title,
+                'description': event.description,
+                'event_type': event.event_type,
+                'creator': {
+                    'id': event.creator.id,
+                    'name': f"{event.creator.first_name} {event.creator.last_name}",
+                    'username': event.creator.display_username,
+                    'image': event.creator.profile_image
+                },
+                'start_date': event.start_date.isoformat() if event.start_date else None,
+                'end_date': event.end_date.isoformat() if event.end_date else None,
+                'location': {
+                    'address': event.address,
+                    'city': event.city,
+                    'country': event.country,
+                    'latitude': event.latitude,
+                    'longitude': event.longitude
+                },
+                'distance': round(float(distance), 2),
+                'max_attendees': event.max_attendees,
+                'confirmed_attendees': confirmed_count,
+                'is_full': event.max_attendees and confirmed_count >= event.max_attendees,
+                'category': event.category,
+                'image_url': event.image_url
+            })
 
         return jsonify({
             'events': nearby_events,
@@ -223,25 +263,27 @@ def get_event(event_id):
         if not event.is_public and (not current_user.is_authenticated or current_user.id != event.creator_id):
             return jsonify({'error': 'Acceso denegado'}), 403
 
-        # Contar asistentes por estado
-        confirmed_count = EventRSVP.query.filter_by(
-            event_id=event_id,
-            status='confirmed',
-            deletedAt=None
-        ).count()
+        # Contar asistentes por estado (una sola query) con cache del confirmed_count
+        status_counts = dict(
+            db.session.query(EventRSVP.status, func.count(EventRSVP.id))
+            .filter(
+                EventRSVP.event_id == event_id,
+                EventRSVP.deletedAt.is_(None),
+            )
+            .group_by(EventRSVP.status)
+            .all()
+        )
+        confirmed_count = status_counts.get('confirmed', 0)
+        pending_count = status_counts.get('pending', 0)
+        set_event_confirmed_count_cached(event_id, confirmed_count)
 
-        pending_count = EventRSVP.query.filter_by(
-            event_id=event_id,
-            status='pending',
-            deletedAt=None
-        ).count()
-
-        # Obtener asistentes confirmados
-        confirmed_rsvps = EventRSVP.query.filter_by(
-            event_id=event_id,
-            status='confirmed',
-            deletedAt=None
-        ).all()
+        # Obtener asistentes confirmados con sus usuarios precargados
+        confirmed_rsvps = (
+            EventRSVP.query
+            .options(selectinload(EventRSVP.user))
+            .filter_by(event_id=event_id, status='confirmed', deletedAt=None)
+            .all()
+        )
 
         attendees = []
         for rsvp in confirmed_rsvps:
@@ -582,6 +624,7 @@ def create_rsvp(event_id):
             db.session.add(notification)
 
         db.session.commit()
+        invalidate_event_confirmed_count(event_id)
 
         return jsonify({
             'message': f'Asistencia {status} correctamente',
@@ -614,6 +657,7 @@ def cancel_rsvp(event_id):
         # Soft delete
         rsvp.deletedAt = datetime.now(timezone.utc)
         db.session.commit()
+        invalidate_event_confirmed_count(rsvp.event_id)
 
         return jsonify({'message': 'Asistencia cancelada correctamente'}), 200
 
@@ -759,6 +803,8 @@ def respond_invitation(invitation_id):
         )
         db.session.add(notification)
         db.session.commit()
+        if status == 'accepted':
+            invalidate_event_confirmed_count(invitation.event_id)
 
         return jsonify({
             'message': f'Invitación {status} correctamente'
@@ -775,11 +821,15 @@ def respond_invitation(invitation_id):
 def get_my_invitations():
     """Obtener invitaciones pendientes del usuario"""
     try:
-        invitations = EventInvitation.query.filter_by(
-            invitee_id=current_user.id,
-            status='pending',
-            deletedAt=None
-        ).all()
+        invitations = (
+            EventInvitation.query
+            .options(
+                selectinload(EventInvitation.event),
+                selectinload(EventInvitation.inviter),
+            )
+            .filter_by(invitee_id=current_user.id, status='pending', deletedAt=None)
+            .all()
+        )
 
         invitations_data = []
         for invitation in invitations:
@@ -840,11 +890,14 @@ def get_event_messages(event_id):
         if not rsvp and current_user.id != event.creator_id:
             return jsonify({'error': 'Debes confirmar asistencia para ver los mensajes'}), 403
 
-        # Obtener mensajes
-        messages = EventMessage.query.filter_by(
-            event_id=event_id,
-            deletedAt=None
-        ).order_by(EventMessage.createdAt.asc()).all()
+        # Obtener mensajes con sender precargado
+        messages = (
+            EventMessage.query
+            .options(selectinload(EventMessage.sender))
+            .filter_by(event_id=event_id, deletedAt=None)
+            .order_by(EventMessage.createdAt.asc())
+            .all()
+        )
 
         messages_data = []
         for message in messages:
@@ -946,13 +999,11 @@ def get_my_events():
             deletedAt=None
         ).order_by(Event.start_date.desc()).all()
 
+        counts_by_event = _confirmed_counts_for_events([e.id for e in events])
+
         events_data = []
         for event in events:
-            confirmed_count = EventRSVP.query.filter_by(
-                event_id=event.id,
-                status='confirmed',
-                deletedAt=None
-            ).count()
+            confirmed_count = counts_by_event.get(event.id, 0)
 
             events_data.append({
                 'id': event.id,
@@ -984,10 +1035,12 @@ def get_my_events():
 def get_my_rsvps():
     """Obtener eventos a los que el usuario ha confirmado asistencia"""
     try:
-        rsvps = EventRSVP.query.filter_by(
-            user_id=current_user.id,
-            deletedAt=None
-        ).all()
+        rsvps = (
+            EventRSVP.query
+            .options(selectinload(EventRSVP.event).selectinload(Event.creator))
+            .filter_by(user_id=current_user.id, deletedAt=None)
+            .all()
+        )
 
         events_data = []
         for rsvp in rsvps:

@@ -5,6 +5,25 @@ from app.logger_config import logger
 from app import db
 from app.models import Project, ProjectMember, User, Notification
 from datetime import datetime, timezone
+from sqlalchemy import func
+from sqlalchemy.orm import selectinload
+
+
+def _active_member_counts(project_ids):
+    """Devuelve {project_id: active_count} agregado en una sola query."""
+    if not project_ids:
+        return {}
+    rows = (
+        db.session.query(ProjectMember.project_id, func.count(ProjectMember.id))
+        .filter(
+            ProjectMember.project_id.in_(project_ids),
+            ProjectMember.status == 'active',
+            ProjectMember.deletedAt.is_(None),
+        )
+        .group_by(ProjectMember.project_id)
+        .all()
+    )
+    return {pid: count for pid, count in rows}
 
 
 # ==================== CRUD de Proyectos ====================
@@ -22,8 +41,8 @@ def get_projects():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
 
-        # Query base
-        query = Project.query.filter_by(
+        # Query base (con creator precargado)
+        query = Project.query.options(selectinload(Project.creator)).filter_by(
             is_public=True,
             deletedAt=None
         )
@@ -45,14 +64,11 @@ def get_projects():
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         projects = pagination.items
 
+        counts_by_project = _active_member_counts([p.id for p in projects])
+
         projects_data = []
         for project in projects:
-            # Contar miembros activos
-            active_members = ProjectMember.query.filter_by(
-                project_id=project.id,
-                status='active',
-                deletedAt=None
-            ).count()
+            active_members = counts_by_project.get(project.id, 0)
 
             projects_data.append({
                 'id': project.id,
@@ -114,12 +130,13 @@ def get_project(project_id):
         elif not project.is_public:
             return jsonify({'error': 'Acceso denegado'}), 403
 
-        # Obtener miembros activos
-        active_members = ProjectMember.query.filter_by(
-            project_id=project_id,
-            status='active',
-            deletedAt=None
-        ).all()
+        # Obtener miembros activos con usuarios precargados
+        active_members = (
+            ProjectMember.query
+            .options(selectinload(ProjectMember.user))
+            .filter_by(project_id=project_id, status='active', deletedAt=None)
+            .all()
+        )
 
         members_data = []
         for member in active_members:
@@ -674,13 +691,11 @@ def get_my_projects():
             deletedAt=None
         ).order_by(Project.createdAt.desc()).all()
 
+        counts_by_project = _active_member_counts([p.id for p in projects])
+
         projects_data = []
         for project in projects:
-            active_members = ProjectMember.query.filter_by(
-                project_id=project.id,
-                status='active',
-                deletedAt=None
-            ).count()
+            active_members = counts_by_project.get(project.id, 0)
 
             projects_data.append({
                 'id': project.id,
@@ -712,11 +727,12 @@ def get_my_projects():
 def get_my_memberships():
     """Obtener proyectos en los que el usuario es miembro"""
     try:
-        memberships = ProjectMember.query.filter_by(
-            user_id=current_user.id,
-            status='active',
-            deletedAt=None
-        ).all()
+        memberships = (
+            ProjectMember.query
+            .options(selectinload(ProjectMember.project).selectinload(Project.creator))
+            .filter_by(user_id=current_user.id, status='active', deletedAt=None)
+            .all()
+        )
 
         projects_data = []
         for membership in memberships:
@@ -757,11 +773,12 @@ def get_my_memberships():
 def get_my_project_invitations():
     """Obtener invitaciones pendientes a proyectos"""
     try:
-        invitations = ProjectMember.query.filter_by(
-            user_id=current_user.id,
-            status='pending',
-            deletedAt=None
-        ).all()
+        invitations = (
+            ProjectMember.query
+            .options(selectinload(ProjectMember.project).selectinload(Project.creator))
+            .filter_by(user_id=current_user.id, status='pending', deletedAt=None)
+            .all()
+        )
 
         invitations_data = []
         for invitation in invitations:

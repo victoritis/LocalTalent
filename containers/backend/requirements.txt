@@ -21,5 +21,6 @@ flask-socketio
 python-socketio
 eventlet
 flask-limiter
+flask-caching
 py-vapid
 pywebpush

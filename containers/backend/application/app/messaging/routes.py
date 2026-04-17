@@ -5,7 +5,8 @@ from app.logger_config import logger
 from app import db
 from app.models import User, Conversation, Message
 from datetime import datetime, timezone
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func, case
+from sqlalchemy.orm import selectinload
 
 
 @bp.route('/api/v1/conversations', methods=['GET'])
@@ -13,55 +14,105 @@ from sqlalchemy import or_, and_
 def get_conversations():
     """Obtener lista de conversaciones del usuario autenticado"""
     try:
-        # Obtener conversaciones donde el usuario es participante
-        conversations = Conversation.query.filter(
-            or_(
-                Conversation.participant1_id == current_user.id,
-                Conversation.participant2_id == current_user.id
-            ),
-            Conversation.deletedAt.is_(None)
-        ).order_by(Conversation.last_message_at.desc().nullslast(), Conversation.createdAt.desc()).all()
+        # Cargamos los participantes con selectinload para evitar queries
+        # extra cuando accedamos a `participant1`/`participant2`.
+        conversations = (
+            Conversation.query
+            .options(
+                selectinload(Conversation.participant1),
+                selectinload(Conversation.participant2),
+            )
+            .filter(
+                or_(
+                    Conversation.participant1_id == current_user.id,
+                    Conversation.participant2_id == current_user.id,
+                ),
+                Conversation.deletedAt.is_(None),
+            )
+            .order_by(
+                Conversation.last_message_at.desc().nullslast(),
+                Conversation.createdAt.desc(),
+            )
+            .all()
+        )
+
+        if not conversations:
+            return jsonify({'conversations': []}), 200
+
+        conversation_ids = [c.id for c in conversations]
+
+        # Subquery: último mensaje no borrado por conversación (id + timestamp).
+        last_msg_subq = (
+            db.session.query(
+                Message.conversation_id.label('conv_id'),
+                func.max(Message.createdAt).label('last_created_at'),
+            )
+            .filter(
+                Message.conversation_id.in_(conversation_ids),
+                Message.deletedAt.is_(None),
+            )
+            .group_by(Message.conversation_id)
+            .subquery()
+        )
+
+        last_messages = (
+            db.session.query(Message)
+            .join(
+                last_msg_subq,
+                and_(
+                    Message.conversation_id == last_msg_subq.c.conv_id,
+                    Message.createdAt == last_msg_subq.c.last_created_at,
+                ),
+            )
+            .all()
+        )
+        last_msg_by_conv = {m.conversation_id: m for m in last_messages}
+
+        # Agregación única para contar mensajes no leídos por conversación.
+        unread_rows = (
+            db.session.query(
+                Message.conversation_id,
+                func.count(Message.id),
+            )
+            .filter(
+                Message.conversation_id.in_(conversation_ids),
+                Message.is_read.is_(False),
+                Message.deletedAt.is_(None),
+                Message.sender_id != current_user.id,
+            )
+            .group_by(Message.conversation_id)
+            .all()
+        )
+        unread_by_conv = {conv_id: count for conv_id, count in unread_rows}
 
         conversations_data = []
         for conv in conversations:
-            # Determinar quién es el otro participante
-            other_user_id = conv.participant2_id if conv.participant1_id == current_user.id else conv.participant1_id
-            other_user = User.query.get(other_user_id)
+            if conv.participant1_id == current_user.id:
+                other_user = conv.participant2
+            else:
+                other_user = conv.participant1
 
             if not other_user:
                 continue
 
-            # Obtener último mensaje
-            last_message = Message.query.filter_by(
-                conversation_id=conv.id,
-                deletedAt=None
-            ).order_by(Message.createdAt.desc()).first()
-
-            # Contar mensajes no leídos
-            unread_count = Message.query.filter_by(
-                conversation_id=conv.id,
-                is_read=False,
-                deletedAt=None
-            ).filter(Message.sender_id != current_user.id).count()
-
-            other_username = other_user.display_username
+            last_message = last_msg_by_conv.get(conv.id)
 
             conversations_data.append({
                 'id': conv.id,
                 'other_user': {
                     'id': other_user.id,
-                    'username': other_username,
+                    'username': other_user.display_username,
                     'first_name': other_user.first_name,
                     'last_name': other_user.last_name,
-                    'profile_image': other_user.profile_image
+                    'profile_image': other_user.profile_image,
                 },
                 'last_message': {
                     'content': last_message.content,
                     'created_at': last_message.createdAt.isoformat() if last_message.createdAt else None,
-                    'is_mine': last_message.sender_id == current_user.id
+                    'is_mine': last_message.sender_id == current_user.id,
                 } if last_message else None,
-                'unread_count': unread_count,
-                'last_message_at': conv.last_message_at.isoformat() if conv.last_message_at else None
+                'unread_count': unread_by_conv.get(conv.id, 0),
+                'last_message_at': conv.last_message_at.isoformat() if conv.last_message_at else None,
             })
 
         return jsonify({'conversations': conversations_data}), 200
@@ -134,15 +185,20 @@ def get_messages(conversation_id):
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
 
-        # Obtener mensajes
-        messages = Message.query.filter_by(
-            conversation_id=conversation_id,
-            deletedAt=None
-        ).order_by(Message.createdAt.desc()).limit(limit).offset(offset).all()
+        # Obtener mensajes (con sender precargado para evitar N+1)
+        messages = (
+            Message.query
+            .options(selectinload(Message.sender))
+            .filter_by(conversation_id=conversation_id, deletedAt=None)
+            .order_by(Message.createdAt.desc())
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
 
         messages_data = []
         for msg in reversed(messages):  # Invertir para orden cronológico
-            sender = User.query.get(msg.sender_id)
+            sender = msg.sender
             sender_username = sender.display_username if sender else None
 
             messages_data.append({
