@@ -2,14 +2,14 @@
 Tareas de Celery para envío de emails y notificaciones periódicas
 """
 from app import create_app, db
-from app.models import User, Notification
+from app.models import User, Notification, Message, Conversation, Event, EventRSVP
 from app.email_service import (
     send_new_users_in_city_email,
     send_event_reminder_email,
     send_weekly_digest_email
 )
 from datetime import datetime, timedelta
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,37 +27,32 @@ def send_new_users_alerts():
     """
     with app.app_context():
         try:
-            # Obtener todos los usuarios activos con email_notifications habilitado
             users = User.query.filter(
-                User.is_deleted == False,
-                User.email_notifications == True
+                User.deletedAt.is_(None),
+                User.email_notifications == True,
+                User.city.isnot(None)
             ).all()
 
             for user in users:
-                if not user.location or not user.location.get('city'):
+                city = user.city
+                if not city:
                     continue
 
-                city = user.location.get('city')
-
-                # Buscar nuevos usuarios en la misma ciudad (últimas 24 horas)
                 yesterday = datetime.utcnow() - timedelta(days=1)
                 new_users = User.query.filter(
-                    and_(
-                        User.is_deleted == False,
-                        User.id != user.id,
-                        User.created_at >= yesterday,
-                        func.json_extract(User.location, '$.city') == city
-                    )
+                    User.deletedAt.is_(None),
+                    User.id != user.id,
+                    User.city.ilike(f'%{city}%'),
+                    User.createdAt >= yesterday
                 ).count()
 
                 if new_users > 0:
-                    # Enviar email
                     frontend_url = app.config.get('FRONTEND_BASE_URL', 'https://localtalent.es')
                     search_url = f"{frontend_url}/search?city={city}"
 
                     send_new_users_in_city_email(
                         user_email=user.email,
-                        user_name=user.name,
+                        user_name=f"{user.first_name} {user.last_name}",
                         city=city,
                         new_users_count=new_users,
                         search_url=search_url
@@ -65,7 +60,7 @@ def send_new_users_alerts():
 
                     logger.info(f'Email de nuevos usuarios enviado a {user.email}')
 
-            return f'Alertas enviadas a usuarios activos'
+            return 'Alertas enviadas a usuarios activos'
 
         except Exception as e:
             logger.error(f'Error en send_new_users_alerts: {str(e)}')
@@ -80,52 +75,47 @@ def send_event_reminders():
     """
     with app.app_context():
         try:
-            from app.models import Event, EventRSVP
-
-            # Buscar eventos que empiezan en 24 horas (±1 hora de margen)
             tomorrow = datetime.utcnow() + timedelta(hours=24)
             time_window_start = tomorrow - timedelta(hours=1)
             time_window_end = tomorrow + timedelta(hours=1)
 
             upcoming_events = Event.query.filter(
-                and_(
-                    Event.is_deleted == False,
-                    Event.start_date >= time_window_start,
-                    Event.start_date <= time_window_end
-                )
+                Event.deletedAt.is_(None),
+                Event.start_date >= time_window_start,
+                Event.start_date <= time_window_end
             ).all()
 
             for event in upcoming_events:
-                # Obtener asistentes confirmados
                 confirmed_rsvps = EventRSVP.query.filter(
-                    and_(
-                        EventRSVP.event_id == event.id,
-                        EventRSVP.status == 'confirmed',
-                        EventRSVP.is_deleted == False
-                    )
+                    EventRSVP.event_id == event.id,
+                    EventRSVP.status == 'confirmed',
+                    EventRSVP.deletedAt.is_(None)
                 ).all()
 
                 for rsvp in confirmed_rsvps:
                     user = User.query.get(rsvp.user_id)
-                    if user and user.email_notifications:
-                        # Preparar datos del evento
-                        event_date = event.start_date.strftime('%d/%m/%Y %H:%M')
-                        event_location = 'Online' if event.is_online else event.location.get('address', event.location.get('city', 'Por definir'))
+                    if not user or not user.email_notifications:
+                        continue
 
-                        frontend_url = app.config.get('FRONTEND_BASE_URL', 'https://localtalent.es')
-                        event_url = f"{frontend_url}/events/{event.id}"
+                    event_date = event.start_date.strftime('%d/%m/%Y %H:%M')
+                    if event.is_online:
+                        event_location = 'Online'
+                    else:
+                        event_location = event.address or event.city or 'Por definir'
 
-                        # Enviar recordatorio
-                        send_event_reminder_email(
-                            user_email=user.email,
-                            user_name=user.name,
-                            event_title=event.title,
-                            event_date=event_date,
-                            event_location=event_location,
-                            event_url=event_url
-                        )
+                    frontend_url = app.config.get('FRONTEND_BASE_URL', 'https://localtalent.es')
+                    event_url = f"{frontend_url}/events/{event.id}"
 
-                        logger.info(f'Recordatorio de evento enviado a {user.email}')
+                    send_event_reminder_email(
+                        user_email=user.email,
+                        user_name=f"{user.first_name} {user.last_name}",
+                        event_title=event.title,
+                        event_date=event_date,
+                        event_location=event_location,
+                        event_url=event_url
+                    )
+
+                    logger.info(f'Recordatorio de evento enviado a {user.email}')
 
             return f'Recordatorios enviados para {len(upcoming_events)} eventos'
 
@@ -142,44 +132,67 @@ def send_weekly_digests():
     """
     with app.app_context():
         try:
-            # Obtener todos los usuarios activos con email_notifications habilitado
             users = User.query.filter(
-                User.is_deleted == False,
+                User.deletedAt.is_(None),
                 User.email_notifications == True
             ).all()
 
             week_ago = datetime.utcnow() - timedelta(days=7)
 
             for user in users:
-                # Calcular estadísticas de la semana
+                # Mensajes no leídos recibidos en la semana
+                new_messages = db.session.query(func.count(Message.id)).join(
+                    Conversation, Message.conversation_id == Conversation.id
+                ).filter(
+                    or_(
+                        Conversation.participant1_id == user.id,
+                        Conversation.participant2_id == user.id
+                    ),
+                    Message.sender_id != user.id,
+                    Message.is_read == False,
+                    Message.createdAt >= week_ago,
+                    Message.deletedAt.is_(None),
+                    Conversation.deletedAt.is_(None)
+                ).scalar() or 0
+
+                # Eventos nuevos en la ciudad del usuario
+                new_events = 0
+                if user.city:
+                    new_events = Event.query.filter(
+                        Event.deletedAt.is_(None),
+                        Event.is_public == True,
+                        Event.city.ilike(f'%{user.city}%'),
+                        Event.createdAt >= week_ago
+                    ).count()
+
+                # Nuevos usuarios en la misma ciudad
+                new_users_in_city = 0
+                if user.city:
+                    new_users_in_city = User.query.filter(
+                        User.deletedAt.is_(None),
+                        User.is_enabled == True,
+                        User.id != user.id,
+                        User.city.ilike(f'%{user.city}%'),
+                        User.createdAt >= week_ago
+                    ).count()
+
                 stats = {
-                    'profile_views': 0,  # TODO: Implementar tracking de visitas al perfil
-                    'new_messages': db.session.query(func.count(
-                        db.session.query(1)
-                        .select_from(db.table('message'))
-                        .filter(
-                            and_(
-                                db.column('receiver_id') == user.id,
-                                db.column('created_at') >= week_ago,
-                                db.column('is_deleted') == False
-                            )
-                        )
-                    )).scalar() or 0,
-                    'new_events': 0,  # TODO: Contar eventos nuevos en la ciudad del usuario
-                    'new_users_in_city': 0  # TODO: Contar nuevos usuarios en la ciudad
+                    'profile_views': 0,  # TODO: implementar cuando exista ProfileView model
+                    'new_messages': new_messages,
+                    'new_events': new_events,
+                    'new_users_in_city': new_users_in_city
                 }
 
-                # Si hay actividad, enviar digest
                 if any(stats.values()):
                     send_weekly_digest_email(
                         user_email=user.email,
-                        user_name=user.name,
+                        user_name=f"{user.first_name} {user.last_name}",
                         stats=stats
                     )
 
                     logger.info(f'Digest semanal enviado a {user.email}')
 
-            return f'Digests semanales enviados'
+            return 'Digests semanales enviados'
 
         except Exception as e:
             logger.error(f'Error en send_weekly_digests: {str(e)}')

@@ -87,7 +87,7 @@ def get_events():
                 'creator': {
                     'id': event.creator.id,
                     'name': f"{event.creator.first_name} {event.creator.last_name}",
-                    'username': event.creator.email.split('@')[0] if event.creator.email else None,
+                    'username': event.creator.display_username,
                     'image': event.creator.profile_image
                 },
                 'start_date': event.start_date.isoformat() if event.start_date else None,
@@ -173,7 +173,7 @@ def get_nearby_events():
                     'creator': {
                         'id': event.creator.id,
                         'name': f"{event.creator.first_name} {event.creator.last_name}",
-                        'username': event.creator.email.split('@')[0] if event.creator.email else None,
+                        'username': event.creator.display_username,
                         'image': event.creator.profile_image
                     },
                     'start_date': event.start_date.isoformat() if event.start_date else None,
@@ -248,7 +248,7 @@ def get_event(event_id):
             attendees.append({
                 'id': rsvp.user.id,
                 'name': f"{rsvp.user.first_name} {rsvp.user.last_name}",
-                'username': rsvp.user.email.split('@')[0] if rsvp.user.email else None,
+                'username': rsvp.user.display_username,
                 'image': rsvp.user.profile_image
             })
 
@@ -275,7 +275,7 @@ def get_event(event_id):
             'creator': {
                 'id': event.creator.id,
                 'name': f"{event.creator.first_name} {event.creator.last_name}",
-                'username': event.creator.email.split('@')[0] if event.creator.email else None,
+                'username': event.creator.display_username,
                 'image': event.creator.profile_image
             },
             'start_date': event.start_date.isoformat() if event.start_date else None,
@@ -327,14 +327,14 @@ def create_event():
         # Validar fecha
         try:
             start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-        except:
+        except (ValueError, TypeError):
             return jsonify({'error': 'Formato de fecha inválido (usar ISO 8601)'}), 400
 
         end_date = None
         if 'end_date' in data and data['end_date']:
             try:
                 end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
 
         # Crear evento
@@ -359,9 +359,9 @@ def create_event():
         )
 
         db.session.add(event)
-        db.session.commit()
+        db.session.flush()  # Obtener event.id sin cerrar la transacción
 
-        # Auto-confirmar asistencia del creador
+        # Auto-confirmar asistencia del creador en la misma transacción
         rsvp = EventRSVP(
             event_id=event.id,
             user_id=current_user.id,
@@ -416,14 +416,14 @@ def update_event(event_id):
         if 'start_date' in data:
             try:
                 event.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 return jsonify({'error': 'Formato de fecha inválido'}), 400
 
         if 'end_date' in data:
             if data['end_date']:
                 try:
                     event.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError):
                     return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
             else:
                 event.end_date = None
@@ -569,9 +569,7 @@ def create_rsvp(event_id):
             )
             db.session.add(rsvp)
 
-        db.session.commit()
-
-        # Crear notificación para el creador del evento
+        # Crear notificación para el creador del evento en la misma transacción
         if current_user.id != event.creator_id:
             notification = Notification(
                 user_id=event.creator_id,
@@ -582,7 +580,8 @@ def create_rsvp(event_id):
                 data={'event_id': event_id, 'user_id': current_user.id, 'status': status}
             )
             db.session.add(notification)
-            db.session.commit()
+
+        db.session.commit()
 
         return jsonify({
             'message': f'Asistencia {status} correctamente',
@@ -681,9 +680,9 @@ def send_invitation(event_id):
         )
 
         db.session.add(invitation)
-        db.session.commit()
+        db.session.flush()  # Obtener invitation.id sin cerrar la transacción
 
-        # Crear notificación para el invitado
+        # Crear notificación para el invitado en la misma transacción
         notification = Notification(
             user_id=invitee_id,
             type='event_invitation',
@@ -731,9 +730,8 @@ def respond_invitation(invitation_id):
             return jsonify({'error': 'Estado inválido (accepted o declined)'}), 400
 
         invitation.status = status
-        db.session.commit()
 
-        # Si acepta, crear RSVP automáticamente
+        # Si acepta, crear RSVP automáticamente en la misma transacción
         if status == 'accepted':
             existing_rsvp = EventRSVP.query.filter_by(
                 event_id=invitation.event_id,
@@ -749,9 +747,8 @@ def respond_invitation(invitation_id):
                     response_date=datetime.now(timezone.utc)
                 )
                 db.session.add(rsvp)
-                db.session.commit()
 
-        # Notificar al creador del evento
+        # Notificar al creador del evento en la misma transacción
         notification = Notification(
             user_id=invitation.inviter_id,
             type='invitation_response',
@@ -799,7 +796,7 @@ def get_my_invitations():
                     'inviter': {
                         'id': invitation.inviter.id,
                         'name': f"{invitation.inviter.first_name} {invitation.inviter.last_name}",
-                        'username': invitation.inviter.email.split('@')[0] if invitation.inviter.email else None,
+                        'username': invitation.inviter.display_username,
                         'image': invitation.inviter.profile_image
                     },
                     'message': invitation.message,
@@ -856,7 +853,7 @@ def get_event_messages(event_id):
                 'sender': {
                     'id': message.sender.id,
                     'name': f"{message.sender.first_name} {message.sender.last_name}",
-                    'username': message.sender.email.split('@')[0] if message.sender.email else None,
+                    'username': message.sender.display_username,
                     'image': message.sender.profile_image
                 },
                 'content': message.content,
@@ -914,7 +911,7 @@ def send_event_message(event_id):
 
         # Preparar datos del sender para la respuesta
         sender = message.sender
-        sender_username = sender.email.split('@')[0] if sender and sender.email else None
+        sender_username = sender.display_username if sender else None
 
         return jsonify({
             'message': 'Mensaje enviado correctamente',
@@ -1007,7 +1004,7 @@ def get_my_rsvps():
                         'creator': {
                             'id': rsvp.event.creator.id,
                             'name': f"{rsvp.event.creator.first_name} {rsvp.event.creator.last_name}",
-                            'username': rsvp.event.creator.email.split('@')[0] if rsvp.event.creator.email else None
+                            'username': rsvp.event.creator.display_username
                         },
                         'start_date': rsvp.event.start_date.isoformat() if rsvp.event.start_date else None,
                         'end_date': rsvp.event.end_date.isoformat() if rsvp.event.end_date else None,

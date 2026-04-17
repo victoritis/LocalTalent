@@ -125,7 +125,7 @@ def handle_send_message(data):
         db.session.commit()
 
         # Obtener datos del sender
-        sender_username = current_user.email.split('@')[0] if current_user.email else None
+        sender_username = current_user.display_username
 
         # Preparar datos del mensaje
         message_data = {
@@ -256,7 +256,7 @@ def handle_typing(data):
         # Determinar el otro participante
         other_user_id = conversation.participant2_id if conversation.participant1_id == current_user.id else conversation.participant1_id
 
-        sender_username = current_user.email.split('@')[0] if current_user.email else None
+        sender_username = current_user.display_username
 
         # Notificar al otro usuario
         emit('user_typing', {

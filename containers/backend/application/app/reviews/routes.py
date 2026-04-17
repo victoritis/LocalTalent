@@ -148,7 +148,7 @@ def create_review():
         db.session.add(review)
         db.session.commit()
 
-        reviewer_username = current_user.email.split('@')[0] if current_user.email else None
+        reviewer_username = current_user.display_username
 
         return jsonify({
             'message': 'Valoración creada correctamente',
@@ -191,7 +191,7 @@ def get_user_reviews(username):
 
         reviews_data = []
         for review in reviews:
-            reviewer_username = review.reviewer.email.split('@')[0] if review.reviewer.email else None
+            reviewer_username = review.reviewer.display_username
             reviews_data.append({
                 'id': review.id,
                 'reviewer_id': review.reviewer_id,
@@ -285,7 +285,7 @@ def update_review(review_id):
 
         db.session.commit()
 
-        reviewer_username = current_user.email.split('@')[0] if current_user.email else None
+        reviewer_username = current_user.display_username
 
         return jsonify({
             'message': 'Valoración actualizada correctamente',
@@ -345,7 +345,7 @@ def get_my_reviews():
 
         reviews_data = []
         for review in reviews:
-            reviewee_username = review.reviewee.email.split('@')[0] if review.reviewee.email else None
+            reviewee_username = review.reviewee.display_username
             reviews_data.append({
                 'id': review.id,
                 'reviewee_id': review.reviewee_id,

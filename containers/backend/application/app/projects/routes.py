@@ -61,7 +61,7 @@ def get_projects():
                 'creator': {
                     'id': project.creator.id,
                     'name': f"{project.creator.first_name} {project.creator.last_name}",
-                    'username': project.creator.email.split('@')[0] if project.creator.email else None,
+                    'username': project.creator.display_username,
                     'image': project.creator.profile_image
                 },
                 'status': project.status,
@@ -126,7 +126,7 @@ def get_project(project_id):
             members_data.append({
                 'id': member.user.id,
                 'name': f"{member.user.first_name} {member.user.last_name}",
-                'username': member.user.email.split('@')[0] if member.user.email else None,
+                'username': member.user.display_username,
                 'image': member.user.profile_image,
                 'role': member.role,
                 'joined_at': member.joined_at.isoformat() if member.joined_at else None
@@ -155,7 +155,7 @@ def get_project(project_id):
             'creator': {
                 'id': project.creator.id,
                 'name': f"{project.creator.first_name} {project.creator.last_name}",
-                'username': project.creator.email.split('@')[0] if project.creator.email else None,
+                'username': project.creator.display_username,
                 'image': project.creator.profile_image
             },
             'status': project.status,
@@ -211,19 +211,19 @@ def create_project():
         if 'start_date' in data and data['start_date']:
             try:
                 project.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 return jsonify({'error': 'Formato de fecha de inicio inválido'}), 400
 
         if 'end_date' in data and data['end_date']:
             try:
                 project.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
 
         db.session.add(project)
-        db.session.commit()
+        db.session.flush()  # Obtener project.id sin cerrar la transacción
 
-        # Auto-agregar al creador como owner
+        # Auto-agregar al creador como owner en la misma transacción
         member = ProjectMember(
             project_id=project.id,
             user_id=current_user.id,
@@ -291,7 +291,7 @@ def update_project(project_id):
             if data['start_date']:
                 try:
                     project.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError):
                     return jsonify({'error': 'Formato de fecha de inicio inválido'}), 400
             else:
                 project.start_date = None
@@ -300,7 +300,7 @@ def update_project(project_id):
             if data['end_date']:
                 try:
                     project.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError):
                     return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
             else:
                 project.end_date = None
@@ -424,9 +424,9 @@ def add_member(project_id):
             )
 
             db.session.add(new_member)
-            db.session.commit()
+            db.session.flush()  # Obtener new_member.id sin cerrar la transacción
 
-            # Crear notificación
+            # Crear notificación en la misma transacción
             notification = Notification(
                 user_id=user_id,
                 type='project_invitation',
@@ -484,9 +484,8 @@ def add_member(project_id):
             )
 
             db.session.add(new_member)
-            db.session.commit()
 
-            # Notificar al creador
+            # Notificar al creador en la misma transacción
             notification = Notification(
                 user_id=project.creator_id,
                 type='project_member_joined',
@@ -542,9 +541,7 @@ def respond_membership(member_id):
             member.deletedAt = datetime.now(timezone.utc)
             message = 'Has rechazado la invitación'
 
-        db.session.commit()
-
-        # Notificar al creador del proyecto
+        # Notificar al creador del proyecto en la misma transacción
         project = Project.query.get(member.project_id)
         if project:
             notification = Notification(
@@ -556,7 +553,8 @@ def respond_membership(member_id):
                 data={'project_id': project.id, 'action': action}
             )
             db.session.add(notification)
-            db.session.commit()
+
+        db.session.commit()
 
         return jsonify({'message': message}), 200
 
@@ -735,7 +733,7 @@ def get_my_memberships():
                         'creator': {
                             'id': membership.project.creator.id,
                             'name': f"{membership.project.creator.first_name} {membership.project.creator.last_name}",
-                            'username': membership.project.creator.email.split('@')[0] if membership.project.creator.email else None
+                            'username': membership.project.creator.display_username
                         },
                         'start_date': membership.project.start_date.isoformat() if membership.project.start_date else None,
                         'end_date': membership.project.end_date.isoformat() if membership.project.end_date else None,
@@ -779,7 +777,7 @@ def get_my_project_invitations():
                         'creator': {
                             'id': invitation.project.creator.id,
                             'name': f"{invitation.project.creator.first_name} {invitation.project.creator.last_name}",
-                            'username': invitation.project.creator.email.split('@')[0] if invitation.project.creator.email else None,
+                            'username': invitation.project.creator.display_username,
                             'image': invitation.project.creator.profile_image
                         },
                         'required_skills': invitation.project.required_skills,
