@@ -60,7 +60,7 @@ Arreglados `is_deleted` vs `deletedAt`, `display_username` property, `ondelete` 
 
 **Estado:** `done`
 **Severidad:** Alta
-**Completado en:** `<SHA>` — 2026-04-17
+**Completado en:** `85b00d9` — 2026-04-17
 
 Añadido módulo `app/schemas/` con Pydantic v2 y decorador `@validate_body` en todos los POST/PUT críticos (events, projects, reviews, messaging, profile). Activado `flask-limiter` (login 5/min, register/recover 3/h, búsqueda 60/min, default 200/min). CORS ahora se lee de `ALLOWED_ORIGINS` env var, rechazando `*`. Headers de seguridad (CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, COOP/CORP) aplicados en `Caddyfile`. Auditado ownership en `update_member_role`/`remove_member` (faltaba verificar `project` antes de dereferenciar).
 
