@@ -9,6 +9,7 @@ from app.cache import (
     invalidate_user_rating,
 )
 from app.models import Review, User, Conversation
+from app.schemas import ReviewCreateSchema, ReviewUpdateSchema, validate_body
 from datetime import datetime, timezone
 from sqlalchemy import func
 
@@ -83,22 +84,13 @@ def can_review_user(username):
 
 @bp.route('/api/v1/reviews', methods=['POST'])
 @login_required
-def create_review():
+@validate_body(ReviewCreateSchema)
+def create_review(payload: ReviewCreateSchema):
     """Crear una nueva review"""
     try:
-        data = request.get_json()
-
-        # Validar campos requeridos
-        if not data or 'reviewee_id' not in data or 'rating' not in data:
-            return jsonify({'error': 'Faltan campos requeridos (reviewee_id, rating)'}), 400
-
-        reviewee_id = data['reviewee_id']
-        rating = data['rating']
-        comment = data.get('comment', '')
-
-        # Validar rating
-        if not isinstance(rating, int) or rating < 1 or rating > 5:
-            return jsonify({'error': 'El rating debe ser un número entre 1 y 5'}), 400
+        reviewee_id = payload.reviewee_id
+        rating = payload.rating
+        comment = payload.comment or ''
 
         # Buscar reviewee
         reviewee = User.query.filter_by(
@@ -269,7 +261,8 @@ def get_user_average_rating(username):
 
 @bp.route('/api/v1/reviews/<int:review_id>', methods=['PUT'])
 @login_required
-def update_review(review_id):
+@validate_body(ReviewUpdateSchema)
+def update_review(review_id, payload: ReviewUpdateSchema):
     """Actualizar una review (solo el creador)"""
     try:
         review = Review.query.filter_by(
@@ -281,17 +274,9 @@ def update_review(review_id):
         if not review:
             return jsonify({'error': 'Valoración no encontrada'}), 404
 
-        data = request.get_json()
-
-        # Actualizar campos
-        if 'rating' in data:
-            rating = data['rating']
-            if not isinstance(rating, int) or rating < 1 or rating > 5:
-                return jsonify({'error': 'El rating debe ser un número entre 1 y 5'}), 400
-            review.rating = rating
-
-        if 'comment' in data:
-            review.comment = data['comment']
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(review, field, value)
 
         db.session.commit()
         invalidate_user_rating(review.reviewee_id)

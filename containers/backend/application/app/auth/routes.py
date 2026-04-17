@@ -1,9 +1,11 @@
 from app.auth import bp
 from flask import jsonify, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import User, JWTToken 
+from app.models import User, JWTToken
 from app import db
 from app.auth.email import send_password_reset_email, send_create_account_email
+from app.rate_limit import limiter
+from flask_limiter.util import get_remote_address
 import random, string
 import pyotp
 from datetime import datetime, timezone
@@ -12,6 +14,7 @@ from app.logger_config import logger
 
 
 @bp.route('/api/v1/check-credentials', methods=['POST'])
+@limiter.limit("5/minute", key_func=get_remote_address)
 def check_credentials():
     """
     Verifica únicamente si el email y contraseña son correctos.
@@ -52,6 +55,7 @@ def check_credentials():
 
 
 @bp.route('/api/v1/verify-otp', methods=['POST'])
+@limiter.limit("5/minute", key_func=get_remote_address)
 def verify_otp():
     """
     Verifica el código OTP y la contraseña antes de iniciar sesión.
@@ -286,6 +290,7 @@ def reset_password(token):
 
 
 @bp.route('/api/v1/recover-password', methods=['POST'])
+@limiter.limit("3/hour", key_func=get_remote_address)
 def recover_password():
     """
     - Recibe una solicitud para recuperar contraseña con el email del usuario.
@@ -323,6 +328,7 @@ def recover_password():
 
 
 @bp.route('/api/v1/register', methods=['POST'])
+@limiter.limit("3/hour", key_func=get_remote_address)
 def register():
     """Permite solicitar un enlace de registro sin necesitar un token previo."""
     try:

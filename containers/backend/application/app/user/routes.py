@@ -4,6 +4,9 @@ from app.user import bp
 from app.logger_config import logger
 from app import db
 from app.models import User, Portfolio, SavedSearch, Review
+from app.schemas import ProfileUpdateSchema, validate_body
+from app.rate_limit import limiter
+from flask_limiter.util import get_remote_address
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_, and_
@@ -87,37 +90,14 @@ def get_my_profile():
 
 @bp.route('/api/v1/profile/me', methods=['PUT'])
 @login_required
-def update_my_profile():
+@validate_body(ProfileUpdateSchema)
+def update_my_profile(payload: ProfileUpdateSchema):
     """Actualizar el perfil del usuario autenticado"""
     try:
         user = current_user
-        data = request.get_json()
-
-        # Campos que se pueden actualizar
-        if 'first_name' in data:
-            user.first_name = data['first_name']
-        if 'last_name' in data:
-            user.last_name = data['last_name']
-        if 'bio' in data:
-            bio = data['bio']
-            # Validar límite de caracteres en bio
-            if bio and len(bio) > 500:
-                return jsonify({'error': 'La biografía no puede exceder 500 caracteres'}), 400
-            user.bio = bio
-        if 'skills' in data:
-            user.skills = data['skills'] if isinstance(data['skills'], list) else []
-        if 'category' in data:
-            user.category = data['category']
-        if 'address' in data:
-            user.address = data['address']
-        if 'city' in data:
-            user.city = data['city']
-        if 'country' in data:
-            user.country = data['country']
-        if 'latitude' in data:
-            user.latitude = float(data['latitude']) if data['latitude'] else None
-        if 'longitude' in data:
-            user.longitude = float(data['longitude']) if data['longitude'] else None
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(user, field, value)
 
         db.session.commit()
 
@@ -305,6 +285,7 @@ def upload_profile_image():
 
 
 @bp.route('/api/v1/users/map', methods=['GET'])
+@limiter.limit("60/minute", key_func=get_remote_address)
 def get_users_for_map():
     """Obtener todos los usuarios con ubicación para el mapa global (respetando privacidad)"""
     try:
@@ -626,6 +607,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 
 @bp.route('/api/v1/users/search', methods=['GET'])
+@limiter.limit("60/minute", key_func=get_remote_address)
 def advanced_search():
     """
     Búsqueda avanzada de usuarios con filtros:

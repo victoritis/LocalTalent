@@ -9,6 +9,15 @@ from app.cache import (
     invalidate_event_confirmed_count,
 )
 from app.models import Event, EventRSVP, EventInvitation, EventMessage, User, Notification
+from app.schemas import (
+    EventCreateSchema,
+    EventUpdateSchema,
+    RSVPSchema,
+    EventInvitationSchema,
+    EventInvitationResponseSchema,
+    MessageSendSchema,
+    validate_body,
+)
 from datetime import datetime, timezone
 from sqlalchemy import func, and_, or_
 from sqlalchemy.orm import selectinload
@@ -355,49 +364,29 @@ def get_event(event_id):
 
 @bp.route('/api/v1/events', methods=['POST'])
 @login_required
-def create_event():
+@validate_body(EventCreateSchema)
+def create_event(payload: EventCreateSchema):
     """Crear un nuevo evento"""
     try:
-        data = request.get_json()
-
-        # Validar campos requeridos
-        required_fields = ['title', 'start_date', 'event_type']
-        for field in required_fields:
-            if not data or field not in data:
-                return jsonify({'error': f'Campo requerido: {field}'}), 400
-
-        # Validar fecha
-        try:
-            start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Formato de fecha inválido (usar ISO 8601)'}), 400
-
-        end_date = None
-        if 'end_date' in data and data['end_date']:
-            try:
-                end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
-
         # Crear evento
         event = Event(
-            title=data['title'],
-            description=data.get('description'),
-            event_type=data['event_type'],
+            title=payload.title,
+            description=payload.description,
+            event_type=payload.event_type,
             creator_id=current_user.id,
-            start_date=start_date,
-            end_date=end_date,
-            is_online=data.get('is_online', False),
-            meeting_url=data.get('meeting_url'),
-            address=data.get('address'),
-            city=data.get('city'),
-            country=data.get('country'),
-            latitude=data.get('latitude'),
-            longitude=data.get('longitude'),
-            max_attendees=data.get('max_attendees'),
-            is_public=data.get('is_public', True),
-            category=data.get('category'),
-            image_url=data.get('image_url')
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            is_online=payload.is_online,
+            meeting_url=payload.meeting_url,
+            address=payload.address,
+            city=payload.city,
+            country=payload.country,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            max_attendees=payload.max_attendees,
+            is_public=payload.is_public,
+            category=payload.category,
+            image_url=payload.image_url,
         )
 
         db.session.add(event)
@@ -431,7 +420,8 @@ def create_event():
 
 @bp.route('/api/v1/events/<int:event_id>', methods=['PUT'])
 @login_required
-def update_event(event_id):
+@validate_body(EventUpdateSchema)
+def update_event(event_id, payload: EventUpdateSchema):
     """Actualizar un evento (solo el creador)"""
     try:
         event = Event.query.filter_by(
@@ -443,65 +433,10 @@ def update_event(event_id):
         if not event:
             return jsonify({'error': 'Evento no encontrado'}), 404
 
-        data = request.get_json()
-
-        # Actualizar campos
-        if 'title' in data:
-            event.title = data['title']
-
-        if 'description' in data:
-            event.description = data['description']
-
-        if 'event_type' in data:
-            event.event_type = data['event_type']
-
-        if 'start_date' in data:
-            try:
-                event.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Formato de fecha inválido'}), 400
-
-        if 'end_date' in data:
-            if data['end_date']:
-                try:
-                    event.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-                except (ValueError, TypeError):
-                    return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
-            else:
-                event.end_date = None
-
-        if 'is_online' in data:
-            event.is_online = data['is_online']
-
-        if 'meeting_url' in data:
-            event.meeting_url = data['meeting_url']
-
-        if 'address' in data:
-            event.address = data['address']
-
-        if 'city' in data:
-            event.city = data['city']
-
-        if 'country' in data:
-            event.country = data['country']
-
-        if 'latitude' in data:
-            event.latitude = data['latitude']
-
-        if 'longitude' in data:
-            event.longitude = data['longitude']
-
-        if 'max_attendees' in data:
-            event.max_attendees = data['max_attendees']
-
-        if 'is_public' in data:
-            event.is_public = data['is_public']
-
-        if 'category' in data:
-            event.category = data['category']
-
-        if 'image_url' in data:
-            event.image_url = data['image_url']
+        # Aplicar solo los campos provistos (model_fields_set respeta la semántica PATCH-like)
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(event, field, value)
 
         db.session.commit()
 
@@ -549,7 +484,8 @@ def delete_event(event_id):
 
 @bp.route('/api/v1/events/<int:event_id>/rsvp', methods=['POST'])
 @login_required
-def create_rsvp(event_id):
+@validate_body(RSVPSchema)
+def create_rsvp(event_id, payload: RSVPSchema):
     """Confirmar/declinar asistencia a un evento"""
     try:
         event = Event.query.filter_by(
@@ -571,11 +507,7 @@ def create_rsvp(event_id):
             if not invitation and current_user.id != event.creator_id:
                 return jsonify({'error': 'Este es un evento privado'}), 403
 
-        data = request.get_json()
-        status = data.get('status', 'confirmed')
-
-        if status not in ['confirmed', 'declined', 'pending']:
-            return jsonify({'error': 'Estado inválido'}), 400
+        status = payload.status
 
         # Verificar si hay cupo disponible
         if status == 'confirmed' and event.max_attendees:
@@ -599,7 +531,7 @@ def create_rsvp(event_id):
             # Actualizar RSVP existente
             existing_rsvp.status = status
             existing_rsvp.response_date = datetime.now(timezone.utc)
-            existing_rsvp.notes = data.get('notes')
+            existing_rsvp.notes = payload.notes
         else:
             # Crear nuevo RSVP
             rsvp = EventRSVP(
@@ -607,7 +539,7 @@ def create_rsvp(event_id):
                 user_id=current_user.id,
                 status=status,
                 response_date=datetime.now(timezone.utc),
-                notes=data.get('notes')
+                notes=payload.notes,
             )
             db.session.add(rsvp)
 
@@ -671,7 +603,8 @@ def cancel_rsvp(event_id):
 
 @bp.route('/api/v1/events/<int:event_id>/invitations', methods=['POST'])
 @login_required
-def send_invitation(event_id):
+@validate_body(EventInvitationSchema)
+def send_invitation(event_id, payload: EventInvitationSchema):
     """Enviar invitación a un evento"""
     try:
         event = Event.query.filter_by(
@@ -683,12 +616,7 @@ def send_invitation(event_id):
         if not event:
             return jsonify({'error': 'Evento no encontrado o no tienes permisos'}), 404
 
-        data = request.get_json()
-
-        if not data or 'invitee_id' not in data:
-            return jsonify({'error': 'Campo requerido: invitee_id'}), 400
-
-        invitee_id = data['invitee_id']
+        invitee_id = payload.invitee_id
 
         # Verificar que el invitado existe
         invitee = User.query.filter_by(
@@ -719,7 +647,7 @@ def send_invitation(event_id):
             event_id=event_id,
             inviter_id=current_user.id,
             invitee_id=invitee_id,
-            message=data.get('message'),
+            message=payload.message,
             status='pending'
         )
 
@@ -755,7 +683,8 @@ def send_invitation(event_id):
 
 @bp.route('/api/v1/events/invitations/<int:invitation_id>/respond', methods=['PUT'])
 @login_required
-def respond_invitation(invitation_id):
+@validate_body(EventInvitationResponseSchema)
+def respond_invitation(invitation_id, payload: EventInvitationResponseSchema):
     """Responder a una invitación de evento"""
     try:
         invitation = EventInvitation.query.filter_by(
@@ -767,12 +696,7 @@ def respond_invitation(invitation_id):
         if not invitation:
             return jsonify({'error': 'Invitación no encontrada'}), 404
 
-        data = request.get_json()
-        status = data.get('status')
-
-        if status not in ['accepted', 'declined']:
-            return jsonify({'error': 'Estado inválido (accepted o declined)'}), 400
-
+        status = payload.status
         invitation.status = status
 
         # Si acepta, crear RSVP automáticamente en la misma transacción
@@ -925,7 +849,8 @@ def get_event_messages(event_id):
 
 @bp.route('/api/v1/events/<int:event_id>/messages', methods=['POST'])
 @login_required
-def send_event_message(event_id):
+@validate_body(MessageSendSchema)
+def send_event_message(event_id, payload: MessageSendSchema):
     """Enviar mensaje al chat grupal del evento"""
     try:
         # Verificar que el usuario es asistente confirmado o creador
@@ -947,16 +872,11 @@ def send_event_message(event_id):
         if not rsvp and current_user.id != event.creator_id:
             return jsonify({'error': 'Debes confirmar asistencia para enviar mensajes'}), 403
 
-        data = request.get_json()
-
-        if not data or 'content' not in data:
-            return jsonify({'error': 'Campo requerido: content'}), 400
-
         # Crear mensaje
         message = EventMessage(
             event_id=event_id,
             sender_id=current_user.id,
-            content=data['content']
+            content=payload.content,
         )
 
         db.session.add(message)
