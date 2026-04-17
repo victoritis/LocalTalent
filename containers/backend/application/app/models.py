@@ -253,6 +253,20 @@ class User(Base, UserMixin):
         db.Index('idx_user_location', 'latitude', 'longitude'),
         db.Index('idx_user_city_country', 'city', 'country'),
         db.Index('idx_user_skills', 'skills', postgresql_using='gin'),
+        # Búsqueda por categoría filtrando sólo perfiles públicos (Issue #2)
+        db.Index('idx_user_category_public', 'category', 'is_profile_public'),
+        # Búsqueda por nombre completo case-insensitive
+        db.Index(
+            'idx_user_full_name_lower',
+            sa.func.lower(sa.text("first_name || ' ' || last_name")),
+        ),
+        # FTS sobre bio en inglés (suficiente como default; se puede tunear
+        # a simple o a multiidioma más adelante sin romper la query existente)
+        db.Index(
+            'idx_user_bio_fts',
+            sa.func.to_tsvector('english', sa.func.coalesce(sa.text('bio'), '')),
+            postgresql_using='gin',
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -560,6 +574,12 @@ class Message(Base):
     conversation = db.relationship('Conversation', backref=db.backref('messages', lazy='dynamic'))
     sender = db.relationship('User', backref='sent_messages')
 
+    # Índices para list/last-message/unread-count (Issue #2)
+    __table_args__ = (
+        db.Index('idx_message_conv_created', 'conversation_id', 'createdAt'),
+        db.Index('idx_message_conv_unread', 'conversation_id', 'is_read', 'sender_id'),
+    )
+
     def __repr__(self):
         return f'<Message {self.id} from {self.sender_id}>'
 
@@ -605,7 +625,8 @@ class Review(Base):
     __table_args__ = (
         db.UniqueConstraint('reviewer_id', 'reviewee_id', name='unique_review_per_user'),
         db.CheckConstraint('rating >= 1 AND rating <= 5', name='valid_rating_range'),
-        db.CheckConstraint('reviewer_id != reviewee_id', name='no_self_review')
+        db.CheckConstraint('reviewer_id != reviewee_id', name='no_self_review'),
+        db.Index('idx_review_reviewee', 'reviewee_id'),
     )
 
     def __repr__(self):
@@ -664,6 +685,13 @@ class Event(Base):
     # Relationships
     creator = db.relationship('User', backref=db.backref('created_events', lazy='dynamic'))
 
+    # Índices para filtros frecuentes (Issue #2)
+    __table_args__ = (
+        db.Index('idx_event_public_start', 'is_public', 'start_date'),
+        db.Index('idx_event_creator', 'creator_id'),
+        db.Index('idx_event_location', 'latitude', 'longitude'),
+    )
+
     def __repr__(self):
         return f'<Event {self.id} - {self.title}>'
 
@@ -696,6 +724,13 @@ class Project(Base):
     # Relationships
     creator = db.relationship('User', backref=db.backref('created_projects', lazy='dynamic'))
 
+    # Índices para filtros frecuentes (Issue #2)
+    __table_args__ = (
+        db.Index('idx_project_public_status', 'is_public', 'status'),
+        db.Index('idx_project_creator', 'creator_id'),
+        db.Index('idx_project_required_skills', 'required_skills', postgresql_using='gin'),
+    )
+
     def __repr__(self):
         return f'<Project {self.id} - {self.title}>'
 
@@ -719,9 +754,10 @@ class EventRSVP(Base):
     event = db.relationship('Event', backref=db.backref('rsvps', lazy='dynamic'))
     user = db.relationship('User', backref=db.backref('event_rsvps', lazy='dynamic'))
 
-    # Constraint: un usuario solo puede tener un RSVP por evento
+    # Constraint + índices (Issue #2)
     __table_args__ = (
         db.UniqueConstraint('event_id', 'user_id', name='unique_rsvp_per_event'),
+        db.Index('idx_rsvp_event_status', 'event_id', 'status'),
     )
 
     def __repr__(self):
@@ -751,9 +787,10 @@ class ProjectMember(Base):
     project = db.relationship('Project', backref=db.backref('members', lazy='dynamic'))
     user = db.relationship('User', backref=db.backref('project_memberships', lazy='dynamic'))
 
-    # Constraint: un usuario solo puede ser miembro una vez por proyecto
+    # Constraint + índices (Issue #2)
     __table_args__ = (
         db.UniqueConstraint('project_id', 'user_id', name='unique_member_per_project'),
+        db.Index('idx_project_member_project_status', 'project_id', 'status'),
     )
 
     def __repr__(self):

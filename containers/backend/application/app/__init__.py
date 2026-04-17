@@ -11,6 +11,7 @@ from flask_mail import Mail
 from flask_socketio import SocketIO
 from app.celery_utils import init_celery
 from redis import Redis
+from app.cache import cache
 from app.logger_config import logger
 
 # Extensiones
@@ -50,6 +51,14 @@ def create_app(config_class=Config):
 
     app.redis = Redis.from_url(app.config['REDIS_URL'])
     app.celery = init_celery(app)
+
+    # Cache con backend Redis (flask-caching). Usa la misma URL que celery/redis.
+    cache.init_app(app, config={
+        'CACHE_TYPE': 'RedisCache',
+        'CACHE_REDIS_URL': app.config['REDIS_URL'],
+        'CACHE_DEFAULT_TIMEOUT': 300,
+        'CACHE_KEY_PREFIX': 'lt:',
+    })
 
     # Configurar CORS
     # Cambio mínimo: actualizar dominios permitidos para reflejar el despliegue actual

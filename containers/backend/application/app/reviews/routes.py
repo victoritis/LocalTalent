@@ -3,6 +3,11 @@ from flask_login import current_user, login_required
 from app.reviews import bp
 from app.logger_config import logger
 from app import db
+from app.cache import (
+    get_user_rating_cached,
+    set_user_rating_cached,
+    invalidate_user_rating,
+)
 from app.models import Review, User, Conversation
 from datetime import datetime, timezone
 from sqlalchemy import func
@@ -147,6 +152,7 @@ def create_review():
 
         db.session.add(review)
         db.session.commit()
+        invalidate_user_rating(reviewee_id)
 
         reviewer_username = current_user.display_username
 
@@ -234,17 +240,21 @@ def get_user_average_rating(username):
         if not user:
             return jsonify({'error': 'Usuario no encontrado'}), 404
 
-        # Calcular promedio y contar reviews
-        result = db.session.query(
-            func.avg(Review.rating).label('average'),
-            func.count(Review.id).label('count')
-        ).filter_by(
-            reviewee_id=user.id,
-            deletedAt=None
-        ).first()
-
-        avg_rating = float(result.average) if result.average else 0
-        review_count = result.count or 0
+        # Cache-first: evitar pegarle a la BBDD si ya hay un valor reciente
+        cached = get_user_rating_cached(user.id)
+        if cached is not None:
+            avg_rating, review_count = cached
+        else:
+            result = db.session.query(
+                func.avg(Review.rating).label('average'),
+                func.count(Review.id).label('count')
+            ).filter_by(
+                reviewee_id=user.id,
+                deletedAt=None
+            ).first()
+            avg_rating = float(result.average) if result.average else 0
+            review_count = result.count or 0
+            set_user_rating_cached(user.id, avg_rating, int(review_count))
 
         return jsonify({
             'username': username,
@@ -284,6 +294,7 @@ def update_review(review_id):
             review.comment = data['comment']
 
         db.session.commit()
+        invalidate_user_rating(review.reviewee_id)
 
         reviewer_username = current_user.display_username
 
@@ -323,7 +334,9 @@ def delete_review(review_id):
 
         # Soft delete
         review.deletedAt = datetime.now(timezone.utc)
+        reviewee_id = review.reviewee_id
         db.session.commit()
+        invalidate_user_rating(reviewee_id)
 
         return jsonify({'message': 'Valoración eliminada correctamente'}), 200
 

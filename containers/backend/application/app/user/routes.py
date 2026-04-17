@@ -652,13 +652,46 @@ def advanced_search():
         per_page = min(request.args.get('per_page', 20, type=int), 100)
 
 
-        # Base query: Solo usuarios habilitados con ubicación y perfil público
-        base_query = User.query.filter(
-            User.is_enabled == True,
-            User.deletedAt.is_(None),
-            User.is_profile_public == True,  # Solo perfiles públicos en búsquedas
-            User.latitude.isnot(None),
-            User.longitude.isnot(None)
+        # Columna de distancia en SQL (Haversine), solo si hay coords de búsqueda
+        distance_col = None
+        if search_lat is not None and search_lng is not None:
+            lat1 = func.radians(User.latitude)
+            lat2 = func.radians(search_lat)
+            lon1 = func.radians(User.longitude)
+            lon2 = func.radians(search_lng)
+            distance_col = (
+                func.acos(
+                    func.sin(lat1) * func.sin(lat2)
+                    + func.cos(lat1) * func.cos(lat2) * func.cos(lon2 - lon1)
+                ) * 6371.0
+            ).label('distance_km')
+
+        # Subquery agregada de reviews: promedio + conteo por reviewee
+        reviews_subq = (
+            db.session.query(
+                Review.reviewee_id.label('reviewee_id'),
+                func.avg(Review.rating).label('avg_rating'),
+                func.count(Review.id).label('review_count'),
+            )
+            .filter(Review.deletedAt.is_(None))
+            .group_by(Review.reviewee_id)
+            .subquery()
+        )
+
+        columns = [User, reviews_subq.c.avg_rating, reviews_subq.c.review_count]
+        if distance_col is not None:
+            columns.append(distance_col)
+
+        base_query = (
+            db.session.query(*columns)
+            .outerjoin(reviews_subq, reviews_subq.c.reviewee_id == User.id)
+            .filter(
+                User.is_enabled.is_(True),
+                User.deletedAt.is_(None),
+                User.is_profile_public.is_(True),
+                User.latitude.isnot(None),
+                User.longitude.isnot(None),
+            )
         )
 
         # Filtrar por categoría
@@ -669,7 +702,6 @@ def advanced_search():
         if skills_param:
             skills_list = [s.strip() for s in skills_param.split(',') if s.strip()]
             if skills_list:
-                # Buscar usuarios que tengan al menos una de las habilidades
                 skill_filters = [User.skills.contains([skill]) for skill in skills_list]
                 base_query = base_query.filter(or_(*skill_filters))
 
@@ -680,17 +712,37 @@ def advanced_search():
                 or_(
                     User.first_name.ilike(search_pattern),
                     User.last_name.ilike(search_pattern),
-                    User.email.ilike(search_pattern)
+                    User.username.ilike(search_pattern),
                 )
             )
 
-        # Obtener todos los usuarios que cumplen los filtros básicos
-        users = base_query.all()
+        # Filtro por radio directo en SQL
+        if radius is not None and distance_col is not None:
+            base_query = base_query.filter(distance_col <= radius)
 
-        # Calcular distancias y filtrar por radio si se proporciona
-        users_with_data = []
-        for user in users:
-            user_data = {
+        # Orden en SQL
+        if sort_by == 'distance' and distance_col is not None:
+            base_query = base_query.order_by(distance_col.asc())
+        elif sort_by == 'rating':
+            base_query = base_query.order_by(
+                func.coalesce(reviews_subq.c.avg_rating, 0).desc()
+            )
+        else:
+            base_query = base_query.order_by(User.id.asc())
+
+        # Paginación en SQL
+        total_results = base_query.count()
+        offset = (page - 1) * per_page
+        rows = base_query.limit(per_page).offset(offset).all()
+
+        paginated_users = []
+        for row in rows:
+            user = row[0]
+            avg_rating = row[1]
+            review_count = row[2]
+            distance = row[3] if distance_col is not None else None
+
+            paginated_users.append({
                 'id': user.id,
                 'username': user.username,
                 'first_name': user.first_name,
@@ -702,50 +754,11 @@ def advanced_search():
                 'longitude': user.longitude,
                 'skills': user.skills or [],
                 'category': user.category,
-                'bio': user.bio
-            }
-
-            # Calcular distancia si se proporcionan coordenadas de búsqueda
-            if search_lat is not None and search_lng is not None:
-                distance = haversine_distance(search_lat, search_lng, user.latitude, user.longitude)
-                user_data['distance'] = round(distance, 2)
-
-                # Filtrar por radio si se especifica
-                if radius is not None and distance > radius:
-                    continue
-            else:
-                user_data['distance'] = None
-
-            # Calcular promedio de rating
-            avg_rating = db.session.query(func.avg(Review.rating)).filter_by(
-                reviewee_id=user.id,
-                deletedAt=None
-            ).scalar()
-            user_data['average_rating'] = float(avg_rating) if avg_rating else 0
-
-            # Contar número de reviews
-            review_count = Review.query.filter_by(
-                reviewee_id=user.id,
-                deletedAt=None
-            ).count()
-            user_data['review_count'] = review_count
-
-            users_with_data.append(user_data)
-
-        # Ordenar resultados
-        if sort_by == 'distance' and search_lat is not None and search_lng is not None:
-            users_with_data.sort(key=lambda x: x['distance'] if x['distance'] is not None else float('inf'))
-        elif sort_by == 'rating':
-            users_with_data.sort(key=lambda x: x['average_rating'], reverse=True)
-        else:  # created_at por defecto
-            # Ya está ordenado por ID (creación)
-            pass
-
-        # Paginación manual
-        total_results = len(users_with_data)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        paginated_users = users_with_data[start_idx:end_idx]
+                'bio': user.bio,
+                'distance': round(float(distance), 2) if distance is not None else None,
+                'average_rating': float(avg_rating) if avg_rating else 0,
+                'review_count': int(review_count) if review_count else 0,
+            })
 
         total_pages = math.ceil(total_results / per_page) if total_results > 0 else 0
 
