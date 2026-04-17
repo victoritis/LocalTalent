@@ -12,15 +12,12 @@ from flask_socketio import SocketIO
 from app.celery_utils import init_celery
 from redis import Redis
 from app.cache import cache
+from app.rate_limit import limiter
 from app.logger_config import logger
 
-# Extensiones
-db = SQLAlchemy()
-migrate = Migrate()
-login = LoginManager()
-login.login_message = "Por favor, inicia sesión para acceder a esta página."
-mail = Mail()
-socketio = SocketIO(cors_allowed_origins=[
+# Orígenes CORS por defecto si ALLOWED_ORIGINS no está configurado.
+# En producción conviene sobreescribir vía variable de entorno.
+DEFAULT_ALLOWED_ORIGINS = [
     "https://localtalent.es",
     "https://api.localtalent.es",
     # Development origins
@@ -28,7 +25,23 @@ socketio = SocketIO(cors_allowed_origins=[
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
-])
+]
+
+
+def _parse_origins(value: str | None) -> list[str]:
+    if not value:
+        return list(DEFAULT_ALLOWED_ORIGINS)
+    raw = [x.strip() for x in value.split(',')]
+    return [x for x in raw if x and x != '*']
+
+
+# Extensiones
+db = SQLAlchemy()
+migrate = Migrate()
+login = LoginManager()
+login.login_message = "Por favor, inicia sesión para acceder a esta página."
+mail = Mail()
+socketio = SocketIO(cors_allowed_origins=_parse_origins(os.environ.get('ALLOWED_ORIGINS')))
 
 # Declaramos la variable celery a nivel de módulo
 celery = None
@@ -60,22 +73,29 @@ def create_app(config_class=Config):
         'CACHE_KEY_PREFIX': 'lt:',
     })
 
-    # Configurar CORS
-    # Cambio mínimo: actualizar dominios permitidos para reflejar el despliegue actual
-    # Si necesitas añadir más, puedes convertirlo en variable de entorno y dividir por comas.
+    # Configurar CORS explícito desde env var ALLOWED_ORIGINS (separado por comas).
+    # Rechazamos cualquier '*' — orígenes concretos únicamente. En prod conviene
+    # definir ALLOWED_ORIGINS para no depender de los defaults.
+    allowed_origins = _parse_origins(os.environ.get('ALLOWED_ORIGINS'))
+    if not allowed_origins:
+        logger.getChild('cors').warning(
+            "ALLOWED_ORIGINS vacío tras filtrar — el backend rechazará todo CORS"
+        )
     CORS(
         app,
         supports_credentials=True,
-        resources={r"/*": {"origins": [
-            "https://localtalent.es",
-            "https://api.localtalent.es",
-            # Dev origins for local front-end (Vite default port 5173 or alternate 3000)
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:3000",
-        ]}}
+        resources={r"/*": {"origins": allowed_origins}},
     )
+
+    # Rate limiter: si hay Redis disponible, usarlo como storage para que los
+    # límites sean consistentes entre procesos/gunicorn workers.
+    if app.config.get('REDIS_URL'):
+        app.config.setdefault('RATELIMIT_STORAGE_URI', app.config['REDIS_URL'])
+        app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
+    # En tests el limiter puede interferir; permitir desactivarlo desde config.
+    if app.config.get('TESTING'):
+        app.config.setdefault('RATELIMIT_ENABLED', False)
+    limiter.init_app(app)
 
     # Registrar blueprints
     from app.auth import bp as auth_bp

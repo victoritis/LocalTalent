@@ -4,6 +4,14 @@ from app.projects import bp
 from app.logger_config import logger
 from app import db
 from app.models import Project, ProjectMember, User, Notification
+from app.schemas import (
+    ProjectCreateSchema,
+    ProjectUpdateSchema,
+    ProjectMemberSchema,
+    ProjectMemberRoleSchema,
+    ProjectMemberResponseSchema,
+    validate_body,
+)
 from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
@@ -202,40 +210,24 @@ def get_project(project_id):
 
 @bp.route('/api/v1/projects', methods=['POST'])
 @login_required
-def create_project():
+@validate_body(ProjectCreateSchema)
+def create_project(payload: ProjectCreateSchema):
     """Crear un nuevo proyecto"""
     try:
-        data = request.get_json()
-
-        # Validar campos requeridos
-        if not data or 'title' not in data:
-            return jsonify({'error': 'Campo requerido: title'}), 400
-
         # Crear proyecto
         project = Project(
-            title=data['title'],
-            description=data.get('description'),
+            title=payload.title,
+            description=payload.description,
             creator_id=current_user.id,
-            status=data.get('status', 'draft'),
-            required_skills=data.get('required_skills', []),
-            max_members=data.get('max_members'),
-            is_public=data.get('is_public', True),
-            category=data.get('category'),
-            image_url=data.get('image_url')
+            status=payload.status,
+            required_skills=payload.required_skills,
+            max_members=payload.max_members,
+            is_public=payload.is_public,
+            category=payload.category,
+            image_url=payload.image_url,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
         )
-
-        # Fechas opcionales
-        if 'start_date' in data and data['start_date']:
-            try:
-                project.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Formato de fecha de inicio inválido'}), 400
-
-        if 'end_date' in data and data['end_date']:
-            try:
-                project.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
 
         db.session.add(project)
         db.session.flush()  # Obtener project.id sin cerrar la transacción
@@ -268,7 +260,8 @@ def create_project():
 
 @bp.route('/api/v1/projects/<int:project_id>', methods=['PUT'])
 @login_required
-def update_project(project_id):
+@validate_body(ProjectUpdateSchema)
+def update_project(project_id, payload: ProjectUpdateSchema):
     """Actualizar un proyecto (solo el creador o owners)"""
     try:
         project = Project.query.filter_by(
@@ -290,52 +283,9 @@ def update_project(project_id):
         if current_user.id != project.creator_id and not member:
             return jsonify({'error': 'No tienes permisos para editar este proyecto'}), 403
 
-        data = request.get_json()
-
-        # Actualizar campos
-        if 'title' in data:
-            project.title = data['title']
-
-        if 'description' in data:
-            project.description = data['description']
-
-        if 'status' in data:
-            if data['status'] not in ['draft', 'active', 'completed', 'cancelled']:
-                return jsonify({'error': 'Estado inválido'}), 400
-            project.status = data['status']
-
-        if 'start_date' in data:
-            if data['start_date']:
-                try:
-                    project.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
-                except (ValueError, TypeError):
-                    return jsonify({'error': 'Formato de fecha de inicio inválido'}), 400
-            else:
-                project.start_date = None
-
-        if 'end_date' in data:
-            if data['end_date']:
-                try:
-                    project.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
-                except (ValueError, TypeError):
-                    return jsonify({'error': 'Formato de fecha de fin inválido'}), 400
-            else:
-                project.end_date = None
-
-        if 'required_skills' in data:
-            project.required_skills = data['required_skills']
-
-        if 'max_members' in data:
-            project.max_members = data['max_members']
-
-        if 'is_public' in data:
-            project.is_public = data['is_public']
-
-        if 'category' in data:
-            project.category = data['category']
-
-        if 'image_url' in data:
-            project.image_url = data['image_url']
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(project, field, value)
 
         db.session.commit()
 
@@ -384,7 +334,8 @@ def delete_project(project_id):
 
 @bp.route('/api/v1/projects/<int:project_id>/members', methods=['POST'])
 @login_required
-def add_member(project_id):
+@validate_body(ProjectMemberSchema)
+def add_member(project_id, payload: ProjectMemberSchema):
     """Agregar un miembro al proyecto o solicitar unirse"""
     try:
         project = Project.query.filter_by(
@@ -395,10 +346,8 @@ def add_member(project_id):
         if not project:
             return jsonify({'error': 'Proyecto no encontrado'}), 404
 
-        data = request.get_json()
-
         # Si se especifica user_id, es una invitación (solo owners)
-        if 'user_id' in data:
+        if payload.user_id is not None:
             # Verificar permisos
             member = ProjectMember.query.filter_by(
                 project_id=project_id,
@@ -410,7 +359,7 @@ def add_member(project_id):
             if current_user.id != project.creator_id and not member:
                 return jsonify({'error': 'Solo los owners pueden invitar miembros'}), 403
 
-            user_id = data['user_id']
+            user_id = payload.user_id
 
             # Verificar que el usuario existe
             user = User.query.filter_by(
@@ -436,7 +385,7 @@ def add_member(project_id):
             new_member = ProjectMember(
                 project_id=project_id,
                 user_id=user_id,
-                role=data.get('role', 'contributor'),
+                role=payload.role or 'contributor',
                 status='pending'
             )
 
@@ -531,7 +480,8 @@ def add_member(project_id):
 
 @bp.route('/api/v1/projects/members/<int:member_id>/respond', methods=['PUT'])
 @login_required
-def respond_membership(member_id):
+@validate_body(ProjectMemberResponseSchema)
+def respond_membership(member_id, payload: ProjectMemberResponseSchema):
     """Responder a una invitación de proyecto"""
     try:
         member = ProjectMember.query.filter_by(
@@ -544,11 +494,7 @@ def respond_membership(member_id):
         if not member:
             return jsonify({'error': 'Invitación no encontrada'}), 404
 
-        data = request.get_json()
-        action = data.get('action')  # 'accept' o 'decline'
-
-        if action not in ['accept', 'decline']:
-            return jsonify({'error': 'Acción inválida (accept o decline)'}), 400
+        action = payload.action  # 'accept' o 'decline'
 
         if action == 'accept':
             member.status = 'active'
@@ -583,9 +529,18 @@ def respond_membership(member_id):
 
 @bp.route('/api/v1/projects/<int:project_id>/members/<int:user_id>', methods=['PUT'])
 @login_required
-def update_member_role(project_id, user_id):
+@validate_body(ProjectMemberRoleSchema)
+def update_member_role(project_id, user_id, payload: ProjectMemberRoleSchema):
     """Actualizar rol de un miembro (solo owners)"""
     try:
+        project = Project.query.filter_by(
+            id=project_id,
+            deletedAt=None,
+        ).first()
+
+        if not project:
+            return jsonify({'error': 'Proyecto no encontrado'}), 404
+
         # Verificar permisos
         owner_member = ProjectMember.query.filter_by(
             project_id=project_id,
@@ -593,8 +548,6 @@ def update_member_role(project_id, user_id):
             role='owner',
             deletedAt=None
         ).first()
-
-        project = Project.query.get(project_id)
 
         if current_user.id != project.creator_id and not owner_member:
             return jsonify({'error': 'Solo los owners pueden cambiar roles'}), 403
@@ -609,12 +562,7 @@ def update_member_role(project_id, user_id):
         if not member:
             return jsonify({'error': 'Miembro no encontrado'}), 404
 
-        data = request.get_json()
-        new_role = data.get('role')
-
-        if new_role not in ['owner', 'collaborator', 'contributor']:
-            return jsonify({'error': 'Rol inválido'}), 400
-
+        new_role = payload.role
         member.role = new_role
         db.session.commit()
 
@@ -642,14 +590,20 @@ def remove_member(project_id, user_id):
         is_self = user_id == current_user.id
 
         if not is_self:
+            project = Project.query.filter_by(
+                id=project_id,
+                deletedAt=None,
+            ).first()
+
+            if not project:
+                return jsonify({'error': 'Proyecto no encontrado'}), 404
+
             owner_member = ProjectMember.query.filter_by(
                 project_id=project_id,
                 user_id=current_user.id,
                 role='owner',
                 deletedAt=None
             ).first()
-
-            project = Project.query.get(project_id)
 
             if current_user.id != project.creator_id and not owner_member:
                 return jsonify({'error': 'Solo los owners pueden remover miembros'}), 403

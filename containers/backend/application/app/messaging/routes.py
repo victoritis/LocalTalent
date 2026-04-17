@@ -4,6 +4,7 @@ from app.messaging import bp
 from app.logger_config import logger
 from app import db
 from app.models import User, Conversation, Message
+from app.schemas import MessageSendSchema, validate_body
 from datetime import datetime, timezone
 from sqlalchemy import or_, and_, func, case
 from sqlalchemy.orm import selectinload
@@ -222,7 +223,8 @@ def get_messages(conversation_id):
 
 @bp.route('/api/v1/conversations/<int:conversation_id>/messages', methods=['POST'])
 @login_required
-def send_message(conversation_id):
+@validate_body(MessageSendSchema)
+def send_message(conversation_id, payload: MessageSendSchema):
     """Enviar mensaje a una conversación (REST endpoint)"""
     try:
         # Verificar que el usuario es participante de la conversación
@@ -239,9 +241,7 @@ def send_message(conversation_id):
         if not conversation:
             return jsonify({'error': 'Conversación no encontrada'}), 404
 
-        data = request.get_json()
-        content = data.get('content', '').strip()
-
+        content = payload.content.strip()
         if not content:
             return jsonify({'error': 'El mensaje no puede estar vacío'}), 400
 

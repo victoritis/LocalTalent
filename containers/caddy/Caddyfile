@@ -2,9 +2,37 @@
 
 }
 
-# Subdominio para la API, apunta al backend
+# Bloque reutilizable con headers de seguridad aplicados por defecto en
+# todas las respuestas. Ajustar `Content-Security-Policy` si se añaden
+# nuevos orígenes (imágenes remotas, analytics, etc.).
+(security_headers) {
+    header {
+        # Forzar HTTPS por 180 días y permitir preload.
+        Strict-Transport-Security "max-age=15552000; includeSubDomains; preload"
+        # Evitar que el sitio sea embebido en iframes de terceros.
+        X-Frame-Options "DENY"
+        # Evitar MIME-sniffing.
+        X-Content-Type-Options "nosniff"
+        # Referrer restrictivo pero compatible con OAuth flows.
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Deshabilitar APIs sensibles por defecto.
+        Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()"
+        # Cross-Origin isolation razonable (sin romper recursos externos).
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "same-site"
+        # CSP: el frontend SPA sirve assets propios y consume la API.
+        # 'unsafe-inline' se permite sólo para estilos generados por tooling;
+        # scripts requieren `self` (sin eval). Ajustar si se usa inline JS.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.localtalent.es wss://api.localtalent.es; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        # Eliminar header que delata el servidor/versión.
+        -Server
+    }
+}
 
+# Subdominio para la API, apunta al backend
 api.localtalent.es {
+    import security_headers
+
     # Compresión
     encode gzip zstd
 
@@ -20,7 +48,8 @@ api.localtalent.es {
 
 # Dominio principal, apunta al frontend
 localtalent.es {
-    
+    import security_headers
+
     # Compresión
     encode gzip zstd
 

@@ -58,25 +58,11 @@ Arreglados `is_deleted` vs `deletedAt`, `display_username` property, `ondelete` 
 
 ## Issue #3 — Hardening de seguridad y validación de entrada
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Alta
+**Completado en:** `<SHA>` — 2026-04-17
 
-### Tareas
-
-- [ ] Crear módulo `app/schemas/` con Pydantic v2 y esquemas para: create/update event, create/update project, create review, send message, update profile, RSVP, project member role.
-- [ ] Envolver todos los endpoints POST/PUT con un decorador `@validate_body(Schema)` que inyecte el objeto validado.
-- [ ] Activar `flask-limiter` (ya está en `requirements.txt`):
-    - `/auth/login` → 5/minute por IP
-    - `/auth/register` → 3/hour por IP
-    - Endpoints públicos de búsqueda → 60/minute por IP
-    - Endpoints autenticados generales → 200/minute por user
-- [ ] Configurar CORS explícito en `app/__init__.py`: orígenes desde env var `ALLOWED_ORIGINS` separados por coma. Rechazar `*` en producción.
-- [ ] Headers de seguridad en Caddy (`caddy/Caddyfile` o similar): CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
-- [ ] Revisar que TODAS las rutas con `@login_required` verifican ownership cuando modifican recursos (algunos casos en `projects/routes.py` y `events/routes.py` no lo hacen bien).
-
-### Criterio de aceptación
-- Payloads malformados devuelven 400 con detalle claro, no 500.
-- `curl` repetido al login es bloqueado tras 5 intentos.
+Añadido módulo `app/schemas/` con Pydantic v2 y decorador `@validate_body` en todos los POST/PUT críticos (events, projects, reviews, messaging, profile). Activado `flask-limiter` (login 5/min, register/recover 3/h, búsqueda 60/min, default 200/min). CORS ahora se lee de `ALLOWED_ORIGINS` env var, rechazando `*`. Headers de seguridad (CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, COOP/CORP) aplicados en `Caddyfile`. Auditado ownership en `update_member_role`/`remove_member` (faltaba verificar `project` antes de dereferenciar).
 
 ---
 
