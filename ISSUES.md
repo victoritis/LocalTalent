@@ -29,8 +29,9 @@ Arreglados `is_deleted` vs `deletedAt`, `display_username` property, `ondelete` 
 
 ## Issue #2 — Eliminar N+1 queries y migrar búsqueda a PostGIS
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Crítica (performance)
+**Completado en:** `62164ad` — 2026-04-17
 
 ### Tareas
 
