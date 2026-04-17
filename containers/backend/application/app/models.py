@@ -296,9 +296,14 @@ class User(Base, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def display_username(self):
+        """Devuelve username si existe, sino la parte local del email como fallback."""
+        return self.username or (self.email.split('@')[0] if self.email else None)
+
     def __repr__(self):
         return '<User {}>'.format(self.email)
-    
+
     def get_reset_password_token(self, expires_in=600):
         
         payload = {
@@ -503,7 +508,7 @@ class Portfolio(Base):
     __tablename__ = 'portfolio'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     media_type = db.Column(db.String(50), nullable=False)  # 'image' o 'video'
@@ -523,8 +528,8 @@ class Conversation(Base):
     __tablename__ = 'conversation'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    participant1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    participant2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    participant1_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    participant2_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     last_message_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
@@ -545,8 +550,8 @@ class Message(Base):
     __tablename__ = 'message'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id', ondelete='CASCADE'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     read_at = db.Column(db.DateTime, nullable=True)
@@ -564,7 +569,7 @@ class Notification(Base):
     __tablename__ = 'notification'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     type = db.Column(db.String(50), nullable=False)  # 'message', 'profile_view', 'new_user', etc.
     title = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=True)
@@ -587,8 +592,8 @@ class Review(Base):
     __tablename__ = 'review'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien hace la review
-    reviewee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien recibe la review
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    reviewee_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     rating = db.Column(db.Integer, nullable=False)  # 1-5 estrellas
     comment = db.Column(db.Text, nullable=True)  # Comentario/testimonio
 
@@ -612,7 +617,7 @@ class SavedSearch(Base):
     __tablename__ = 'saved_search'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     name = db.Column(db.String(255), nullable=False)  # Nombre de la búsqueda guardada
 
     # Parámetros de búsqueda guardados como JSON
@@ -633,7 +638,7 @@ class Event(Base):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     event_type = db.Column(db.String(50), nullable=False, default='networking')  # networking, workshop, etc.
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Fechas
     start_date = db.Column(db.DateTime, nullable=False)
@@ -670,7 +675,7 @@ class Project(Base):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Estado y fechas
     status = db.Column(db.String(50), nullable=False, default='draft')  # draft, active, completed, cancelled
@@ -700,8 +705,8 @@ class EventRSVP(Base):
     __tablename__ = 'event_rsvp'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Estado de confirmación
     status = db.Column(db.String(50), nullable=False, default='pending')  # pending, confirmed, declined, cancelled
@@ -728,8 +733,8 @@ class ProjectMember(Base):
     __tablename__ = 'project_member'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Rol y estado
     role = db.Column(db.String(50), nullable=False, default='contributor')  # owner, collaborator, contributor
@@ -760,9 +765,9 @@ class EventInvitation(Base):
     __tablename__ = 'event_invitation'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
-    inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    invitee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', ondelete='CASCADE'), nullable=False)
+    inviter_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    invitee_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Estado
     status = db.Column(db.String(50), nullable=False, default='pending')  # pending, accepted, declined
@@ -789,8 +794,8 @@ class EventMessage(Base):
     __tablename__ = 'event_message'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', ondelete='CASCADE'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     content = db.Column(db.Text, nullable=False)
 
     # Relationships
@@ -806,8 +811,8 @@ class BlockedUser(Base):
     __tablename__ = 'blocked_user'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    blocker_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien bloquea
-    blocked_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien es bloqueado
+    blocker_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    blocked_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     reason = db.Column(db.Text, nullable=True)  # Razón del bloqueo
 
     # Relationships
@@ -829,8 +834,8 @@ class Report(Base):
     __tablename__ = 'report'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien reporta
-    reported_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Quien es reportado
+    reporter_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    reported_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Tipo y detalles del reporte
     reason = db.Column(db.String(100), nullable=False)  # harassment, spam, inappropriate, fake, other
@@ -841,7 +846,7 @@ class Report(Base):
 
     # Notas del moderador
     moderator_notes = db.Column(db.Text, nullable=True)
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Admin que revisó
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
@@ -858,7 +863,7 @@ class VerificationRequest(Base):
     __tablename__ = 'verification_request'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
 
     # Estado de la solicitud
     status = db.Column(db.String(50), nullable=False, default='pending')  # pending, approved, rejected
@@ -871,7 +876,7 @@ class VerificationRequest(Base):
     additional_info = db.Column(db.Text, nullable=True)
 
     # Revisión
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     admin_notes = db.Column(db.Text, nullable=True)
 

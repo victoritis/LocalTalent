@@ -44,7 +44,7 @@ def get_conversations():
                 deletedAt=None
             ).filter(Message.sender_id != current_user.id).count()
 
-            other_username = other_user.email.split('@')[0] if other_user.email else None
+            other_username = other_user.display_username
 
             conversations_data.append({
                 'id': conv.id,
@@ -143,7 +143,7 @@ def get_messages(conversation_id):
         messages_data = []
         for msg in reversed(messages):  # Invertir para orden cronológico
             sender = User.query.get(msg.sender_id)
-            sender_username = sender.email.split('@')[0] if sender and sender.email else None
+            sender_username = sender.display_username if sender else None
 
             messages_data.append({
                 'id': msg.id,
@@ -204,7 +204,7 @@ def send_message(conversation_id):
         db.session.commit()
 
         # Obtener datos del sender para la respuesta
-        sender_username = current_user.email.split('@')[0] if current_user.email else None
+        sender_username = current_user.display_username
 
         return jsonify({
             'message': 'Mensaje enviado correctamente',
