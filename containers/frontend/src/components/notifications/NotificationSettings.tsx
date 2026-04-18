@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, Mail } from 'lucide-react'
+import { Bell, Mail, Eye } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -17,12 +17,14 @@ import { getNotificationPreferences, updateNotificationPreferences } from '@/ser
 
 interface NotificationPreferences {
   email_notifications: boolean
+  notify_profile_views: boolean
   push_notifications: boolean
 }
 
 export function NotificationSettings() {
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email_notifications: true,
+    notify_profile_views: false,
     push_notifications: false,
   })
   const [isLoading, setIsLoading] = useState(true)
@@ -57,6 +59,7 @@ export function NotificationSettings() {
 
       setPreferences({
         email_notifications: !!data?.email_notifications,
+        notify_profile_views: !!data?.notify_profile_views,
         push_notifications: (data?.push_notifications ?? pushServerStatus) || isPushLocal,
       })
     } catch (error) {
@@ -78,6 +81,22 @@ export function NotificationSettings() {
 
       setPreferences((prev) => ({ ...prev, email_notifications: newValue }))
       toast.success(`Notificaciones por email ${newValue ? 'activadas' : 'desactivadas'}`)
+    } catch (error) {
+      console.error('Error actualizando preferencias:', error)
+      toast.error('Error al actualizar las preferencias')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleProfileViewsToggle = async () => {
+    setIsSaving(true)
+    setLoadError(null)
+    try {
+      const newValue = !preferences.notify_profile_views
+      await updateNotificationPreferences({ notify_profile_views: newValue })
+      setPreferences((prev) => ({ ...prev, notify_profile_views: newValue }))
+      toast.success(`Notificaciones de visitas a tu perfil ${newValue ? 'activadas' : 'desactivadas'}`)
     } catch (error) {
       console.error('Error actualizando preferencias:', error)
       toast.error('Error al actualizar las preferencias')
@@ -194,6 +213,27 @@ export function NotificationSettings() {
               id="email-notifications"
               checked={preferences.email_notifications}
               onCheckedChange={handleEmailToggle}
+              disabled={isSaving}
+            />
+          </div>
+
+          {/* Visitas a mi perfil */}
+          <div className="flex items-center justify-between space-x-4 rounded-lg border p-4">
+            <div className="flex items-start space-x-4">
+              <Eye className="w-6 h-6 text-primary mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="notify-profile-views" className="text-base">
+                  Avisarme cuando vean mi perfil
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Recibirás una notificación cuando otra persona visite tu perfil. Desactivado por defecto.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="notify-profile-views"
+              checked={preferences.notify_profile_views}
+              onCheckedChange={handleProfileViewsToggle}
               disabled={isSaving}
             />
           </div>

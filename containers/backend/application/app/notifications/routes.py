@@ -245,6 +245,7 @@ def get_notification_preferences():
     try:
         return jsonify({
             'email_notifications': current_user.email_notifications,
+            'notify_profile_views': bool(getattr(current_user, 'notify_profile_views', False)),
             'push_notifications': current_user.push_subscription is not None
         }), 200
     except Exception as e:
@@ -257,16 +258,20 @@ def get_notification_preferences():
 def update_notification_preferences():
     """Actualizar preferencias de notificaciones"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
 
         if 'email_notifications' in data:
             current_user.email_notifications = bool(data['email_notifications'])
+
+        if 'notify_profile_views' in data:
+            current_user.notify_profile_views = bool(data['notify_profile_views'])
 
         db.session.commit()
 
         return jsonify({
             'message': 'Preferencias actualizadas',
-            'email_notifications': current_user.email_notifications
+            'email_notifications': current_user.email_notifications,
+            'notify_profile_views': bool(getattr(current_user, 'notify_profile_views', False)),
         }), 200
     except Exception as e:
         db.session.rollback()
