@@ -6,6 +6,7 @@ from app import db
 from app.models import User, Portfolio, SavedSearch, Review
 from app.schemas import ProfileUpdateSchema, validate_body
 from app.rate_limit import limiter
+from app.common import haversine_km_sql
 from flask_limiter.util import get_remote_address
 import os
 from werkzeug.utils import secure_filename
@@ -580,31 +581,6 @@ def delete_portfolio_item(item_id):
 
 # === BÚSQUEDA AVANZADA ===
 
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Calcular la distancia entre dos puntos en la Tierra usando la fórmula de Haversine.
-    Retorna la distancia en kilómetros.
-    """
-    # Radio de la Tierra en kilómetros
-    R = 6371.0
-
-    # Convertir grados a radianes
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
-
-    # Diferencias
-    dlat = lat2_rad - lat1_rad
-    dlon = lon2_rad - lon1_rad
-
-    # Fórmula de Haversine
-    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    distance = R * c
-    return distance
-
 
 @bp.route('/api/v1/users/search', methods=['GET'])
 @limiter.limit("60/minute", key_func=get_remote_address)
@@ -634,18 +610,13 @@ def advanced_search():
         per_page = min(request.args.get('per_page', 20, type=int), 100)
 
 
-        # Columna de distancia en SQL (Haversine), solo si hay coords de búsqueda
+        # Columna de distancia en SQL (Haversine), solo si hay coords de búsqueda.
+        # Se delega al helper común (`app.common.geo`) para mantener una única
+        # fórmula compartida con `events/routes.py`.
         distance_col = None
         if search_lat is not None and search_lng is not None:
-            lat1 = func.radians(User.latitude)
-            lat2 = func.radians(search_lat)
-            lon1 = func.radians(User.longitude)
-            lon2 = func.radians(search_lng)
-            distance_col = (
-                func.acos(
-                    func.sin(lat1) * func.sin(lat2)
-                    + func.cos(lat1) * func.cos(lat2) * func.cos(lon2 - lon1)
-                ) * 6371.0
+            distance_col = haversine_km_sql(
+                User.latitude, User.longitude, search_lat, search_lng
             ).label('distance_km')
 
         # Subquery agregada de reviews: promedio + conteo por reviewee

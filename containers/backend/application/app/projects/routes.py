@@ -12,6 +12,7 @@ from app.schemas import (
     ProjectMemberResponseSchema,
     validate_body,
 )
+from app.common import serialize_user_summary, paginated_response
 from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
@@ -32,6 +33,23 @@ def _active_member_counts(project_ids):
         .all()
     )
     return {pid: count for pid, count in rows}
+
+
+def _serialize_project_listing(project):
+    return {
+        'id': project.id,
+        'title': project.title,
+        'description': project.description,
+        'creator': serialize_user_summary(project.creator),
+        'status': project.status,
+        'start_date': project.start_date.isoformat() if project.start_date else None,
+        'end_date': project.end_date.isoformat() if project.end_date else None,
+        'required_skills': project.required_skills,
+        'max_members': project.max_members,
+        'category': project.category,
+        'image_url': project.image_url,
+        'created_at': project.createdAt.isoformat() if project.createdAt else None,
+    }
 
 
 # ==================== CRUD de Proyectos ====================
@@ -68,45 +86,22 @@ def get_projects():
         # Ordenar por fecha de creación
         query = query.order_by(Project.createdAt.desc())
 
-        # Paginación
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        projects = pagination.items
+        def _decorate(projects, serialized):
+            counts_by_project = _active_member_counts([p.id for p in projects])
+            for project, data in zip(projects, serialized):
+                active = counts_by_project.get(project.id, 0)
+                data['active_members'] = active
+                data['is_full'] = bool(project.max_members and active >= project.max_members)
 
-        counts_by_project = _active_member_counts([p.id for p in projects])
-
-        projects_data = []
-        for project in projects:
-            active_members = counts_by_project.get(project.id, 0)
-
-            projects_data.append({
-                'id': project.id,
-                'title': project.title,
-                'description': project.description,
-                'creator': {
-                    'id': project.creator.id,
-                    'name': f"{project.creator.first_name} {project.creator.last_name}",
-                    'username': project.creator.display_username,
-                    'image': project.creator.profile_image
-                },
-                'status': project.status,
-                'start_date': project.start_date.isoformat() if project.start_date else None,
-                'end_date': project.end_date.isoformat() if project.end_date else None,
-                'required_skills': project.required_skills,
-                'max_members': project.max_members,
-                'active_members': active_members,
-                'is_full': project.max_members and active_members >= project.max_members,
-                'category': project.category,
-                'image_url': project.image_url,
-                'created_at': project.createdAt.isoformat() if project.createdAt else None
-            })
-
-        return jsonify({
-            'projects': projects_data,
-            'total': pagination.total,
-            'pages': pagination.pages,
-            'current_page': page,
-            'per_page': per_page
-        }), 200
+        response = paginated_response(
+            query,
+            page=page,
+            per_page=per_page,
+            serializer=_serialize_project_listing,
+            items_key='projects',
+            decorate_items=_decorate,
+        )
+        return jsonify(response), 200
 
     except Exception as e:
         logger.getChild('projects').error(f"Error obteniendo proyectos: {str(e)}", exc_info=True)
@@ -148,13 +143,11 @@ def get_project(project_id):
 
         members_data = []
         for member in active_members:
+            summary = serialize_user_summary(member.user) or {}
             members_data.append({
-                'id': member.user.id,
-                'name': f"{member.user.first_name} {member.user.last_name}",
-                'username': member.user.display_username,
-                'image': member.user.profile_image,
+                **summary,
                 'role': member.role,
-                'joined_at': member.joined_at.isoformat() if member.joined_at else None
+                'joined_at': member.joined_at.isoformat() if member.joined_at else None,
             })
 
         # Verificar si el usuario actual es miembro
@@ -173,33 +166,17 @@ def get_project(project_id):
                     'joined_at': membership.joined_at.isoformat() if membership.joined_at else None
                 }
 
-        project_data = {
-            'id': project.id,
-            'title': project.title,
-            'description': project.description,
-            'creator': {
-                'id': project.creator.id,
-                'name': f"{project.creator.first_name} {project.creator.last_name}",
-                'username': project.creator.display_username,
-                'image': project.creator.profile_image
-            },
-            'status': project.status,
-            'start_date': project.start_date.isoformat() if project.start_date else None,
-            'end_date': project.end_date.isoformat() if project.end_date else None,
-            'required_skills': project.required_skills,
-            'max_members': project.max_members,
+        project_data = _serialize_project_listing(project)
+        project_data.update({
             'is_public': project.is_public,
-            'category': project.category,
-            'image_url': project.image_url,
             'members': members_data,
             'stats': {
                 'active_members': len(members_data),
-                'is_full': project.max_members and len(members_data) >= project.max_members
+                'is_full': bool(project.max_members and len(members_data) >= project.max_members),
             },
             'user_membership': user_membership,
-            'created_at': project.createdAt.isoformat() if project.createdAt else None,
-            'updated_at': project.updatedAt.isoformat() if project.updatedAt else None
-        }
+            'updated_at': project.updatedAt.isoformat() if project.updatedAt else None,
+        })
 
         return jsonify(project_data), 200
 
@@ -663,7 +640,7 @@ def get_my_projects():
                 'max_members': project.max_members,
                 'is_public': project.is_public,
                 'image_url': project.image_url,
-                'created_at': project.createdAt.isoformat() if project.createdAt else None
+                'created_at': project.createdAt.isoformat() if project.createdAt else None,
             })
 
         return jsonify({
@@ -691,6 +668,13 @@ def get_my_memberships():
         projects_data = []
         for membership in memberships:
             if membership.project.deletedAt is None:
+                creator_summary = serialize_user_summary(membership.project.creator)
+                if creator_summary is not None:
+                    creator_summary = {
+                        'id': creator_summary['id'],
+                        'name': creator_summary['name'],
+                        'username': creator_summary['username'],
+                    }
                 projects_data.append({
                     'membership_id': membership.id,
                     'role': membership.role,
@@ -700,11 +684,7 @@ def get_my_memberships():
                         'title': membership.project.title,
                         'description': membership.project.description,
                         'status': membership.project.status,
-                        'creator': {
-                            'id': membership.project.creator.id,
-                            'name': f"{membership.project.creator.first_name} {membership.project.creator.last_name}",
-                            'username': membership.project.creator.display_username
-                        },
+                        'creator': creator_summary,
                         'start_date': membership.project.start_date.isoformat() if membership.project.start_date else None,
                         'end_date': membership.project.end_date.isoformat() if membership.project.end_date else None,
                         'category': membership.project.category,
@@ -745,12 +725,7 @@ def get_my_project_invitations():
                         'title': invitation.project.title,
                         'description': invitation.project.description,
                         'status': invitation.project.status,
-                        'creator': {
-                            'id': invitation.project.creator.id,
-                            'name': f"{invitation.project.creator.first_name} {invitation.project.creator.last_name}",
-                            'username': invitation.project.creator.display_username,
-                            'image': invitation.project.creator.profile_image
-                        },
+                        'creator': serialize_user_summary(invitation.project.creator),
                         'required_skills': invitation.project.required_skills,
                         'category': invitation.project.category,
                         'image_url': invitation.project.image_url

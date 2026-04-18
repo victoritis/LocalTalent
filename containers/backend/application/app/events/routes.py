@@ -18,43 +18,14 @@ from app.schemas import (
     MessageSendSchema,
     validate_body,
 )
+from app.common import (
+    serialize_user_summary,
+    paginated_response,
+    haversine_km_sql,
+)
 from datetime import datetime, timezone
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
-import math
-
-
-def calculate_distance(lat1, lon1, lat2, lon2):
-    """Calcular distancia entre dos puntos usando la fórmula de Haversine (en km)"""
-    R = 6371  # Radio de la Tierra en km
-
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
-    delta_lat = math.radians(lat2 - lat1)
-    delta_lon = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon/2)**2
-    c = 2 * math.asin(math.sqrt(a))
-
-    return R * c
-
-
-def haversine_km_sql(lat_col, lon_col, lat_val, lon_val):
-    """Fórmula Haversine en SQL (sin PostGIS).
-
-    Usa `acos(sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2-lon1)) * 6371`.
-    Recibe columnas SQLAlchemy y valores escalares, devuelve una expresión en km.
-    """
-    lat1 = func.radians(lat_col)
-    lat2 = func.radians(lat_val)
-    lon1 = func.radians(lon_col)
-    lon2 = func.radians(lon_val)
-    return (
-        func.acos(
-            func.sin(lat1) * func.sin(lat2)
-            + func.cos(lat1) * func.cos(lat2) * func.cos(lon2 - lon1)
-        ) * 6371.0
-    )
 
 
 def _confirmed_counts_for_events(event_ids):
@@ -72,6 +43,37 @@ def _confirmed_counts_for_events(event_ids):
         .all()
     )
     return {event_id: count for event_id, count in rows}
+
+
+def _event_location(event):
+    if event.is_online:
+        return None
+    return {
+        'address': event.address,
+        'city': event.city,
+        'country': event.country,
+        'latitude': event.latitude,
+        'longitude': event.longitude,
+    }
+
+
+def _serialize_event_listing(event):
+    return {
+        'id': event.id,
+        'title': event.title,
+        'description': event.description,
+        'event_type': event.event_type,
+        'creator': serialize_user_summary(event.creator),
+        'start_date': event.start_date.isoformat() if event.start_date else None,
+        'end_date': event.end_date.isoformat() if event.end_date else None,
+        'is_online': event.is_online,
+        'meeting_url': event.meeting_url if event.is_online else None,
+        'location': _event_location(event),
+        'max_attendees': event.max_attendees,
+        'category': event.category,
+        'image_url': event.image_url,
+        'created_at': event.createdAt.isoformat() if event.createdAt else None,
+    }
 
 
 # ==================== CRUD de Eventos ====================
@@ -116,54 +118,22 @@ def get_events():
         # Ordenar por fecha de inicio
         query = query.order_by(Event.start_date.asc())
 
-        # Paginación
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        events = pagination.items
+        def _decorate(events, serialized):
+            counts_by_event = _confirmed_counts_for_events([e.id for e in events])
+            for event, data in zip(events, serialized):
+                confirmed = counts_by_event.get(event.id, 0)
+                data['confirmed_attendees'] = confirmed
+                data['is_full'] = bool(event.max_attendees and confirmed >= event.max_attendees)
 
-        # Contadores agregados en una única query
-        counts_by_event = _confirmed_counts_for_events([e.id for e in events])
-
-        events_data = []
-        for event in events:
-            confirmed_count = counts_by_event.get(event.id, 0)
-
-            events_data.append({
-                'id': event.id,
-                'title': event.title,
-                'description': event.description,
-                'event_type': event.event_type,
-                'creator': {
-                    'id': event.creator.id,
-                    'name': f"{event.creator.first_name} {event.creator.last_name}",
-                    'username': event.creator.display_username,
-                    'image': event.creator.profile_image
-                },
-                'start_date': event.start_date.isoformat() if event.start_date else None,
-                'end_date': event.end_date.isoformat() if event.end_date else None,
-                'is_online': event.is_online,
-                'meeting_url': event.meeting_url if event.is_online else None,
-                'location': {
-                    'address': event.address,
-                    'city': event.city,
-                    'country': event.country,
-                    'latitude': event.latitude,
-                    'longitude': event.longitude
-                } if not event.is_online else None,
-                'max_attendees': event.max_attendees,
-                'confirmed_attendees': confirmed_count,
-                'is_full': event.max_attendees and confirmed_count >= event.max_attendees,
-                'category': event.category,
-                'image_url': event.image_url,
-                'created_at': event.createdAt.isoformat() if event.createdAt else None
-            })
-
-        return jsonify({
-            'events': events_data,
-            'total': pagination.total,
-            'pages': pagination.pages,
-            'current_page': page,
-            'per_page': per_page
-        }), 200
+        response = paginated_response(
+            query,
+            page=page,
+            per_page=per_page,
+            serializer=_serialize_event_listing,
+            items_key='events',
+            decorate_items=_decorate,
+        )
+        return jsonify(response), 200
 
     except Exception as e:
         logger.getChild('events').error(f"Error obteniendo eventos: {str(e)}", exc_info=True)
@@ -217,33 +187,20 @@ def get_nearby_events():
             distance = distances_by_event.get(event.id, 0) or 0
             confirmed_count = counts_by_event.get(event.id, 0)
 
-            nearby_events.append({
-                'id': event.id,
-                'title': event.title,
-                'description': event.description,
-                'event_type': event.event_type,
-                'creator': {
-                    'id': event.creator.id,
-                    'name': f"{event.creator.first_name} {event.creator.last_name}",
-                    'username': event.creator.display_username,
-                    'image': event.creator.profile_image
-                },
-                'start_date': event.start_date.isoformat() if event.start_date else None,
-                'end_date': event.end_date.isoformat() if event.end_date else None,
-                'location': {
-                    'address': event.address,
-                    'city': event.city,
-                    'country': event.country,
-                    'latitude': event.latitude,
-                    'longitude': event.longitude
-                },
-                'distance': round(float(distance), 2),
-                'max_attendees': event.max_attendees,
-                'confirmed_attendees': confirmed_count,
-                'is_full': event.max_attendees and confirmed_count >= event.max_attendees,
-                'category': event.category,
-                'image_url': event.image_url
-            })
+            data = _serialize_event_listing(event)
+            data['distance'] = round(float(distance), 2)
+            data['confirmed_attendees'] = confirmed_count
+            data['is_full'] = bool(event.max_attendees and confirmed_count >= event.max_attendees)
+            # En este endpoint los eventos son presenciales por definición:
+            # conservar `location` siempre (no depender de `is_online`).
+            data['location'] = {
+                'address': event.address,
+                'city': event.city,
+                'country': event.country,
+                'latitude': event.latitude,
+                'longitude': event.longitude,
+            }
+            nearby_events.append(data)
 
         return jsonify({
             'events': nearby_events,
@@ -294,14 +251,7 @@ def get_event(event_id):
             .all()
         )
 
-        attendees = []
-        for rsvp in confirmed_rsvps:
-            attendees.append({
-                'id': rsvp.user.id,
-                'name': f"{rsvp.user.first_name} {rsvp.user.last_name}",
-                'username': rsvp.user.display_username,
-                'image': rsvp.user.profile_image
-            })
+        attendees = [serialize_user_summary(rsvp.user) for rsvp in confirmed_rsvps]
 
         # Verificar si el usuario actual tiene RSVP
         user_rsvp = None
@@ -318,42 +268,18 @@ def get_event(event_id):
                     'response_date': rsvp.response_date.isoformat() if rsvp.response_date else None
                 }
 
-        event_data = {
-            'id': event.id,
-            'title': event.title,
-            'description': event.description,
-            'event_type': event.event_type,
-            'creator': {
-                'id': event.creator.id,
-                'name': f"{event.creator.first_name} {event.creator.last_name}",
-                'username': event.creator.display_username,
-                'image': event.creator.profile_image
-            },
-            'start_date': event.start_date.isoformat() if event.start_date else None,
-            'end_date': event.end_date.isoformat() if event.end_date else None,
-            'is_online': event.is_online,
-            'meeting_url': event.meeting_url if event.is_online else None,
-            'location': {
-                'address': event.address,
-                'city': event.city,
-                'country': event.country,
-                'latitude': event.latitude,
-                'longitude': event.longitude
-            } if not event.is_online else None,
-            'max_attendees': event.max_attendees,
+        event_data = _serialize_event_listing(event)
+        event_data.update({
             'is_public': event.is_public,
-            'category': event.category,
-            'image_url': event.image_url,
             'stats': {
                 'confirmed': confirmed_count,
                 'pending': pending_count,
-                'is_full': event.max_attendees and confirmed_count >= event.max_attendees
+                'is_full': bool(event.max_attendees and confirmed_count >= event.max_attendees),
             },
             'attendees': attendees,
             'user_rsvp': user_rsvp,
-            'created_at': event.createdAt.isoformat() if event.createdAt else None,
-            'updated_at': event.updatedAt.isoformat() if event.updatedAt else None
-        }
+            'updated_at': event.updatedAt.isoformat() if event.updatedAt else None,
+        })
 
         return jsonify(event_data), 200
 
@@ -767,12 +693,7 @@ def get_my_invitations():
                         'start_date': invitation.event.start_date.isoformat() if invitation.event.start_date else None,
                         'event_type': invitation.event.event_type
                     },
-                    'inviter': {
-                        'id': invitation.inviter.id,
-                        'name': f"{invitation.inviter.first_name} {invitation.inviter.last_name}",
-                        'username': invitation.inviter.display_username,
-                        'image': invitation.inviter.profile_image
-                    },
+                    'inviter': serialize_user_summary(invitation.inviter),
                     'message': invitation.message,
                     'created_at': invitation.createdAt.isoformat() if invitation.createdAt else None
                 })
@@ -827,12 +748,7 @@ def get_event_messages(event_id):
         for message in messages:
             messages_data.append({
                 'id': message.id,
-                'sender': {
-                    'id': message.sender.id,
-                    'name': f"{message.sender.first_name} {message.sender.last_name}",
-                    'username': message.sender.display_username,
-                    'image': message.sender.profile_image
-                },
+                'sender': serialize_user_summary(message.sender),
                 'content': message.content,
                 'created_at': message.createdAt.isoformat() if message.createdAt else None
             })
@@ -884,18 +800,12 @@ def send_event_message(event_id, payload: MessageSendSchema):
 
         # Preparar datos del sender para la respuesta
         sender = message.sender
-        sender_username = sender.display_username if sender else None
 
         return jsonify({
             'message': 'Mensaje enviado correctamente',
             'event_message': {
                 'id': message.id,
-                'sender': {
-                    'id': sender.id if sender else None,
-                    'name': f"{sender.first_name} {sender.last_name}" if sender else None,
-                    'username': sender_username,
-                    'image': sender.profile_image if sender else None
-                },
+                'sender': serialize_user_summary(sender),
                 'content': message.content,
                 'created_at': message.createdAt.isoformat() if message.createdAt else None
             }
@@ -965,6 +875,15 @@ def get_my_rsvps():
         events_data = []
         for rsvp in rsvps:
             if rsvp.event.deletedAt is None:
+                creator_summary = serialize_user_summary(rsvp.event.creator)
+                # Mantener el formato histórico (sin `image`) para evitar
+                # romper consumidores de este endpoint concreto.
+                if creator_summary is not None:
+                    creator_summary = {
+                        'id': creator_summary['id'],
+                        'name': creator_summary['name'],
+                        'username': creator_summary['username'],
+                    }
                 events_data.append({
                     'rsvp_id': rsvp.id,
                     'status': rsvp.status,
@@ -974,11 +893,7 @@ def get_my_rsvps():
                         'title': rsvp.event.title,
                         'description': rsvp.event.description,
                         'event_type': rsvp.event.event_type,
-                        'creator': {
-                            'id': rsvp.event.creator.id,
-                            'name': f"{rsvp.event.creator.first_name} {rsvp.event.creator.last_name}",
-                            'username': rsvp.event.creator.display_username
-                        },
+                        'creator': creator_summary,
                         'start_date': rsvp.event.start_date.isoformat() if rsvp.event.start_date else None,
                         'end_date': rsvp.event.end_date.isoformat() if rsvp.event.end_date else None,
                         'is_online': rsvp.event.is_online,
