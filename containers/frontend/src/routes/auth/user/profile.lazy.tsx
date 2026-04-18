@@ -12,6 +12,7 @@ import { Loader2, Camera, MapPin, Plus, X } from 'lucide-react'
 import { LocationSelector } from '@/components/profile/LocationSelector'
 import { AddPortfolioItem } from '@/components/portfolio/AddPortfolioItem'
 import { PortfolioGallery } from '@/components/portfolio/PortfolioGallery'
+import { UsernameSettings } from '@/components/profile/UsernameSettings'
 
 export const Route = createLazyFileRoute('/auth/user/profile')({
   component: MyProfile
@@ -410,6 +411,16 @@ function MyProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Username settings */}
+      <div className="mt-6">
+        <UsernameSettings
+          currentUsername={profile.username}
+          onChanged={(newUsername) =>
+            setProfile((prev) => (prev ? { ...prev, username: newUsername } : prev))
+          }
+        />
+      </div>
 
       {/* Portfolio Section */}
       <div className="mt-6">

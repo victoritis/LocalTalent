@@ -78,22 +78,11 @@ Extraídos helpers a `app/common/`: `serialize_user_summary`, `paginated_respons
 
 ## Issue #5 — Completar features a medias (profile views, digest, username)
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Media (features rotas)
+**Completado en:** `ae50bda` — 2026-04-18
 
-### Tareas
-
-- [ ] Nuevo modelo `ProfileView(Base)` con `viewer_id`, `viewed_id`, `viewed_at`, índice en `(viewed_id, viewed_at)`. Migración.
-- [ ] Endpoint `POST /api/v1/users/<id>/view` que registre la visita con deduplicación (máximo una vista por viewer/viewed cada 24h).
-- [ ] Hook en frontend: cuando se carga `/profile/<username>` llamar al endpoint.
-- [ ] En `email_tasks.send_weekly_digests`, sustituir `profile_views: 0` por el conteo real de la última semana.
-- [ ] Notificación realtime cuando alguien ve tu perfil (opt-in en settings — respetar `email_notifications` y añadir nuevo flag `notify_profile_views`).
-- [ ] Endpoint `PUT /api/v1/users/me/username` con validación de unicidad y formato (`^[a-z0-9_-]{3,30}$`). Sólo editable 1 vez cada 30 días.
-- [ ] Página en frontend para cambiar username con feedback de disponibilidad en tiempo real.
-
-### Criterio de aceptación
-- El email de digest muestra views reales.
-- Usuario puede cambiar username desde la UI.
+Añadido modelo `ProfileView` + migración `13_profile_views_username` con índices `(viewed_id, viewed_at)` y `(viewer_id, viewed_id, viewed_at)`. Nuevo endpoint `POST /api/v1/users/<id>/view` con dedup 24h. Hook de registro en la carga de `/auth/user/<username>`. `email_tasks.send_weekly_digests` muestra `profile_views` reales (únicos por viewer/última semana). Nuevo flag `notify_profile_views` en `User` con toggle en `/api/v1/notifications/preferences` y en la UI de `NotificationSettings`; notifica in-app al `viewed` cuando está activo. Endpoint `PUT /api/v1/users/me/username` con validación de formato/unicidad y cooldown de 30 días, y `GET /api/v1/users/me/username/availability`. Componente `UsernameSettings` con feedback de disponibilidad en tiempo real embebido en la página de perfil.
 
 ---
 

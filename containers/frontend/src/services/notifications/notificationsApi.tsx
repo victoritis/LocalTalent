@@ -65,6 +65,7 @@ export const deleteNotification = async (notificationId: number): Promise<void> 
 // Obtener preferencias de notificaciones
 export const getNotificationPreferences = async (): Promise<{
   email_notifications: boolean
+  notify_profile_views: boolean
   push_notifications: boolean
 }> => {
   const response = await axios.get(`${API_URL}/api/v1/notifications/preferences`, {
@@ -76,7 +77,8 @@ export const getNotificationPreferences = async (): Promise<{
 // Actualizar preferencias de notificaciones
 export const updateNotificationPreferences = async (preferences: {
   email_notifications?: boolean
-}): Promise<{ message: string; email_notifications: boolean }> => {
+  notify_profile_views?: boolean
+}): Promise<{ message: string; email_notifications: boolean; notify_profile_views: boolean }> => {
   const response = await axios.put(`${API_URL}/api/v1/notifications/preferences`, preferences, {
     withCredentials: true,
   })

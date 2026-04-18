@@ -3,8 +3,8 @@ from flask_login import current_user, login_required
 from app.user import bp
 from app.logger_config import logger
 from app import db
-from app.models import User, Portfolio, SavedSearch, Review
-from app.schemas import ProfileUpdateSchema, validate_body
+from app.models import User, Portfolio, SavedSearch, Review, ProfileView, Notification
+from app.schemas import ProfileUpdateSchema, UsernameUpdateSchema, validate_body
 from app.rate_limit import limiter
 from app.common import haversine_km_sql
 from flask_limiter.util import get_remote_address
@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, and_
 import math
 from app.auth.email import send_delete_account_email
 from flask_login import logout_user
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Minimal user blueprint: only session info retained
 
@@ -147,6 +147,7 @@ def get_public_profile(username):
         if not user.is_profile_public:
             # Si el perfil es privado, solo mostrar información muy básica
             return jsonify({
+                'id': user.id,
                 'username': username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
@@ -174,6 +175,7 @@ def get_public_profile(username):
 
         # Solo devolver información pública
         return jsonify({
+            'id': user.id,
             'username': username,
             'first_name': user.first_name,
             'last_name': user.last_name,
@@ -882,3 +884,174 @@ def update_saved_search(search_id):
         db.session.rollback()
         logger.getChild('user').error(f"Error actualizando búsqueda guardada: {str(e)}", exc_info=True)
         return jsonify({'error': 'Error al actualizar la búsqueda guardada'}), 500
+
+
+# === PROFILE VIEWS (Issue #5) ===
+
+PROFILE_VIEW_DEDUP_HOURS = 24
+
+
+@bp.route('/api/v1/users/<int:user_id>/view', methods=['POST'])
+@login_required
+@limiter.limit("60/minute", key_func=lambda: str(current_user.id) if current_user.is_authenticated else get_remote_address())
+def register_profile_view(user_id: int):
+    """Registrar que el usuario autenticado ha visto el perfil de <user_id>.
+
+    Dedup: una sola visita contabilizada por (viewer, viewed) cada 24h.
+    Notifica al `viewed` si tiene `notify_profile_views` activado.
+    """
+    try:
+        if user_id == current_user.id:
+            return jsonify({'counted': False, 'reason': 'self_view'}), 200
+
+        viewed = db.session.get(User, user_id)
+        if not viewed or viewed.deletedAt is not None or not viewed.is_enabled:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        since = datetime.now(timezone.utc) - timedelta(hours=PROFILE_VIEW_DEDUP_HOURS)
+        recent = (
+            db.session.query(ProfileView.id)
+            .filter(
+                ProfileView.viewer_id == current_user.id,
+                ProfileView.viewed_id == user_id,
+                ProfileView.viewed_at >= since,
+                ProfileView.deletedAt.is_(None),
+            )
+            .first()
+        )
+
+        if recent:
+            return jsonify({'counted': False, 'reason': 'already_counted'}), 200
+
+        pv = ProfileView(
+            viewer_id=current_user.id,
+            viewed_id=user_id,
+            viewed_at=datetime.now(timezone.utc),
+        )
+        db.session.add(pv)
+
+        if getattr(viewed, 'notify_profile_views', False):
+            viewer_name = f"{current_user.first_name} {current_user.last_name}".strip() or current_user.display_username
+            link_username = current_user.username or ''
+            notif = Notification(
+                user_id=viewed.id,
+                type='profile_view',
+                title='Alguien vió tu perfil',
+                message=f'{viewer_name} acaba de visitar tu perfil',
+                link=f'/auth/user/{link_username}' if link_username else None,
+                data={'viewer_id': current_user.id, 'viewer_username': link_username or None},
+                is_read=False,
+            )
+            db.session.add(notif)
+
+        db.session.commit()
+        return jsonify({'counted': True}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error registrando profile view: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+# === USERNAME CHANGE (Issue #5) ===
+
+USERNAME_CHANGE_COOLDOWN_DAYS = 30
+
+
+@bp.route('/api/v1/users/me/username', methods=['PUT'])
+@login_required
+@limiter.limit("5/hour", key_func=lambda: str(current_user.id) if current_user.is_authenticated else get_remote_address())
+@validate_body(UsernameUpdateSchema)
+def update_my_username(payload: UsernameUpdateSchema):
+    """Actualizar el username del usuario autenticado.
+
+    - Validación de formato `^[a-z0-9_-]{3,30}$` (en el schema).
+    - Unicidad comprobada antes de commit.
+    - Sólo editable una vez cada 30 días.
+    """
+    try:
+        new_username = payload.username
+        user = current_user
+
+        if user.username == new_username:
+            return jsonify({
+                'message': 'El username ya es el actual',
+                'username': user.username,
+            }), 200
+
+        now = datetime.now(timezone.utc)
+        last_change = user.username_changed_at
+        if last_change is not None:
+            if last_change.tzinfo is None:
+                last_change = last_change.replace(tzinfo=timezone.utc)
+            cooldown = timedelta(days=USERNAME_CHANGE_COOLDOWN_DAYS)
+            if now - last_change < cooldown:
+                next_change_at = last_change + cooldown
+                return jsonify({
+                    'error': 'Sólo puedes cambiar el username una vez cada 30 días',
+                    'next_change_at': next_change_at.isoformat(),
+                }), 429
+
+        exists = (
+            db.session.query(User.id)
+            .filter(User.username == new_username, User.id != user.id)
+            .first()
+        )
+        if exists:
+            return jsonify({'error': 'Username no disponible'}), 409
+
+        user.username = new_username
+        user.username_changed_at = now
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Username actualizado correctamente',
+            'username': user.username,
+            'next_change_at': (now + timedelta(days=USERNAME_CHANGE_COOLDOWN_DAYS)).isoformat(),
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.getChild('user').error(f"Error actualizando username: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al actualizar el username'}), 500
+
+
+@bp.route('/api/v1/users/me/username/availability', methods=['GET'])
+@login_required
+@limiter.limit("30/minute", key_func=lambda: str(current_user.id) if current_user.is_authenticated else get_remote_address())
+def check_username_availability():
+    """Consulta en tiempo real si un username está disponible y con formato válido."""
+    try:
+        raw = (request.args.get('username') or '').strip().lower()
+        try:
+            UsernameUpdateSchema(username=raw)
+        except Exception:
+            return jsonify({
+                'username': raw,
+                'valid_format': False,
+                'available': False,
+                'reason': 'invalid_format',
+            }), 200
+
+        if current_user.username == raw:
+            return jsonify({
+                'username': raw,
+                'valid_format': True,
+                'available': True,
+                'is_current': True,
+            }), 200
+
+        taken = (
+            db.session.query(User.id)
+            .filter(User.username == raw, User.id != current_user.id)
+            .first()
+        )
+        return jsonify({
+            'username': raw,
+            'valid_format': True,
+            'available': taken is None,
+            'is_current': False,
+        }), 200
+    except Exception as e:
+        logger.getChild('user').error(f"Error comprobando username: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500

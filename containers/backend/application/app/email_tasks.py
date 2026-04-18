@@ -2,7 +2,7 @@
 Tareas de Celery para envío de emails y notificaciones periódicas
 """
 from app import create_app, db
-from app.models import User, Notification, Message, Conversation, Event, EventRSVP
+from app.models import User, Notification, Message, Conversation, Event, EventRSVP, ProfileView
 from app.email_service import (
     send_new_users_in_city_email,
     send_event_reminder_email,
@@ -176,8 +176,17 @@ def send_weekly_digests():
                         User.createdAt >= week_ago
                     ).count()
 
+                # Vistas de perfil recibidas en la última semana (únicas por viewer)
+                profile_views = db.session.query(
+                    func.count(func.distinct(ProfileView.viewer_id))
+                ).filter(
+                    ProfileView.viewed_id == user.id,
+                    ProfileView.viewed_at >= week_ago,
+                    ProfileView.deletedAt.is_(None),
+                ).scalar() or 0
+
                 stats = {
-                    'profile_views': 0,  # TODO: implementar cuando exista ProfileView model
+                    'profile_views': int(profile_views),
                     'new_messages': new_messages,
                     'new_events': new_events,
                     'new_users_in_city': new_users_in_city

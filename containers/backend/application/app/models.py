@@ -123,7 +123,7 @@ def setup_base():
     # Modelos activos (sin organizaciones)
     for model in [User, JWTToken, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch,
                   Event, Project, EventRSVP, ProjectMember, EventInvitation, EventMessage,
-                  BlockedUser, Report, VerificationRequest]:
+                  BlockedUser, Report, VerificationRequest, ProfileView]:
         event.listen(model, 'after_insert', lambda m, c, t: record_base(m, c, t, "INSERT"))
         event.listen(model, 'after_update', lambda m, c, t: record_base(m, c, t, "UPDATE"))
 
@@ -223,7 +223,7 @@ def record_audit(mapper, connection, target):
 def setup_audit():
     for model in [User, Feedback, Portfolio, Message, Conversation, Notification, Review, SavedSearch,
                   Event, Project, EventRSVP, ProjectMember, EventInvitation, EventMessage,
-                  BlockedUser, Report, VerificationRequest]:
+                  BlockedUser, Report, VerificationRequest, ProfileView]:
         event.listen(model, 'after_insert', record_audit)
         event.listen(model, 'after_update', record_audit)
 
@@ -299,7 +299,11 @@ class User(Base, UserMixin):
 
     # Campos de notificaciones
     email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Notificaciones por email habilitadas
+    notify_profile_views = db.Column(db.Boolean, default=False, nullable=False)  # Opt-in notificación al ver perfil
     push_subscription = db.Column(JSONB, nullable=True)  # Suscripción para web push notifications
+
+    # Último cambio de username (para rate-limit de 30 días)
+    username_changed_at = db.Column(db.DateTime, nullable=True)
 
     # Campo de roles especiales (conservado)
     special_roles = db.Column(db.ARRAY(db.String), default=[])
@@ -923,6 +927,28 @@ class VerificationRequest(Base):
 
     def __repr__(self):
         return f'<VerificationRequest {self.id} - User {self.user_id}, Status: {self.status}>'
+
+
+# ProfileView Model - Visitas a perfiles (Issue #5)
+class ProfileView(Base):
+    __tablename__ = 'profile_view'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    viewer_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    viewed_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    viewed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    viewer = db.relationship('User', foreign_keys=[viewer_id], backref='profile_views_made')
+    viewed = db.relationship('User', foreign_keys=[viewed_id], backref='profile_views_received')
+
+    __table_args__ = (
+        db.Index('idx_profile_view_viewed_viewed_at', 'viewed_id', 'viewed_at'),
+        db.Index('idx_profile_view_viewer_viewed_viewed_at', 'viewer_id', 'viewed_id', 'viewed_at'),
+        db.CheckConstraint('viewer_id != viewed_id', name='no_self_profile_view'),
+    )
+
+    def __repr__(self):
+        return f'<ProfileView {self.id} - viewer {self.viewer_id} -> viewed {self.viewed_id}>'
 
 
 # Registrar listeners una vez que todos los modelos (incluido Feedback) están definidos

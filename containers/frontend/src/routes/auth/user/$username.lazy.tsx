@@ -15,6 +15,7 @@ export const Route = createLazyFileRoute('/auth/user/$username')({
 })
 
 interface PublicProfile {
+  id?: number
   username: string
   first_name: string
   last_name: string
@@ -64,6 +65,14 @@ function PublicProfile() {
 
       const data = await response.json()
       setProfile(data)
+
+      // Registrar la visita al perfil (dedup en backend por 24h, ignorar errores).
+      if (data?.id) {
+        fetch(`${apiUrl}/api/v1/users/${data.id}/view`, {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => { /* silent */ })
+      }
     } catch (error) {
       setError('Error al cargar el perfil')
     } finally {
