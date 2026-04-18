@@ -68,22 +68,11 @@ Añadido módulo `app/schemas/` con Pydantic v2 y decorador `@validate_body` en 
 
 ## Issue #4 — Refactor de rutas duplicadas (events + projects)
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Media-Alta (mantenibilidad)
+**Completado en:** `d9363bb` — 2026-04-18
 
-### Tareas
-
-- [ ] Extraer funciones helper en `app/common/`:
-    - `serialize_user_summary(user)` con id, name, username, image
-    - `haversine_filter(query, lat, lon, radius)` (o mover a PostGIS si se hizo #2)
-    - `paginated_response(query, page, per_page)`
-- [ ] Crear un mixin `SoftDeleteQueryMixin` que añada `.active()` y `.deleted()` filtros encadenables.
-- [ ] Revisar si conviene una clase abstracta `BaseListingResource` o si la extracción de helpers es suficiente (depende del equipo — documentar la decisión).
-- [ ] Eliminar el cálculo Haversine inline de `events/routes.py` y `user/routes.py`.
-
-### Criterio de aceptación
-- `events/routes.py` y `projects/routes.py` pierden >30% de líneas duplicadas.
-- Sin cambios funcionales visibles.
+Extraídos helpers a `app/common/`: `serialize_user_summary`, `paginated_response`, `haversine_km_sql` / `haversine_filter`, y `SoftDeleteQueryMixin`. Removidas las funciones Python muertas `calculate_distance` y `haversine_distance`. Decisión documentada: composición de helpers en vez de `BaseListingResource` para no migrar toda la app a Flask-RESTful sólo por la deduplicación.
 
 ---
 
