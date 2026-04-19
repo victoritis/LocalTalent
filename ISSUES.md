@@ -100,7 +100,7 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 **Estado:** `done`
 **Severidad:** Media (UX)
-**Completado en:** `<sha>` — 2026-04-19
+**Completado en:** `92694c1` — 2026-04-19
 
 Resuelta la parte de infraestructura (sub-issue #6.1.a) y dividida en cuatro sub-issues por dominio (#6.1.b…#6.1.e) porque la migración completa de ~200–300 strings en 42 archivos excede el alcance de una ejecución. Se implementó la base + migración de fechas + enums compartidos. Los cuatro sub-issues restantes (`login`/`register`/quick wins, eventos/proyectos, seguridad/perfil/notificaciones/mensajería y limpieza final + validación) quedan abajo como `pending` para siguientes runs.
 
@@ -110,7 +110,7 @@ Resuelta la parte de infraestructura (sub-issue #6.1.a) y dividida en cuatro sub
 
 **Estado:** `done`
 **Severidad:** Media (UX)
-**Completado en:** `<sha>` — 2026-04-19
+**Completado en:** `92694c1` — 2026-04-19
 
 Nuevo helper `src/lib/date.ts` con `getLocale()` que lee `i18n.resolvedLanguage` y mapea a locales de `date-fns`, más `formatDate`/`formatDateTime`/`formatTime`/`formatLongDate`. Migrados los 7 callsites de `toLocaleDateString('es-ES', …)` y `toLocaleTimeString('es-ES', …)` a `date-fns` vía el helper (`events/EventsList.tsx`, `events/EventDetail.tsx`, `events/MyEvents.tsx`, `security/BlockedUsers.tsx`, `projects/ProjectDetail.tsx`, `profile/UsernameSettings.tsx`). `SupportPage` traducida completamente (usa `Trans` para el negrilla). `i18n/es.json` + `i18n/en.json` ampliados con `support.*` y nuevas secciones `enums.eventTypes`, `enums.projectStatus`, `enums.rsvpStatus`, `enums.privacyLevel` para centralizar los selectores duplicados que usan `events/projects/security`.
 
