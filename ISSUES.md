@@ -136,19 +136,11 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 ## Issue #6.3 — Observabilidad frontend (Sentry/alternativa)
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Baja (calidad)
+**Completado en:** `<sha>` — 2026-04-19
 
-### Tareas
-
-- [ ] Integrar `@sentry/react` con `init()` condicional a env var `VITE_SENTRY_DSN`.
-- [ ] Conectar `ErrorBoundary` (`src/components/error/ErrorBoundary.tsx`) via `onError` a `Sentry.captureException`.
-- [ ] Instrumentar `window.addEventListener('error' | 'unhandledrejection')` en `main.tsx` sin duplicar el envío.
-- [ ] Adjuntar `release` y `environment` a partir de Vite env vars.
-- [ ] Documentar en `NOTIFICATIONS_SETUP.md` (o nuevo `OBSERVABILITY.md`) cómo provisionar el DSN por entorno.
-
-### Criterio de aceptación
-- Un error lanzado manualmente en dev llega a Sentry (o se registra localmente si DSN no está seteado).
+Añadido `@sentry/react` con helper `src/lib/sentry.ts` que inicializa condicional a `VITE_SENTRY_DSN`, respetando `VITE_SENTRY_ENVIRONMENT`/`VITE_SENTRY_RELEASE` y ratios (`TRACES_SAMPLE_RATE`, `REPLAYS_*`). `initSentry()` se llama en `main.tsx` antes de los listeners globales, de modo que la integración `GlobalHandlers` de Sentry (que maneja `error` y `unhandledrejection`) se registra primero y no se duplica con los handlers de auto-reload de módulos dinámicos. `ErrorBoundary` reenvía todos los errores a `Sentry.captureException` vía el helper `captureException`, que además hace fallback a `console.error` si la integración no está activa. Nuevos tipos en `vite-env.d.ts` para las env vars y guía completa de provisioning en `OBSERVABILITY.md`.
 
 ---
 

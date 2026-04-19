@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react"
 import { ErrorState } from "@/components/ui/error-state"
+import { captureException } from "@/lib/sentry"
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -19,6 +20,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    captureException(error, { componentStack: info.componentStack })
     if (this.props.onError) {
       this.props.onError(error, info)
     } else if (import.meta.env.DEV) {
