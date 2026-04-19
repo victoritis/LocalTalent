@@ -82,5 +82,39 @@
     "label": "Language",
     "spanish": "Spanish",
     "english": "English"
+  },
+  "support": {
+    "title": "Technical Support",
+    "unavailableTitle": "Feature Unavailable",
+    "unavailableIntro": "The direct-support section of this platform is currently disabled.",
+    "contactAdmin": "If you need help or have any questions, please <strong>contact your organization administrator</strong>. They will be able to help you with any incident or question.",
+    "thanks": "Thanks for your understanding.",
+    "teamSignature": "The application team"
+  },
+  "enums": {
+    "eventTypes": {
+      "networking": "Networking",
+      "workshop": "Workshop",
+      "meetup": "Meetup",
+      "conference": "Conference",
+      "jamSession": "Jam session",
+      "exhibition": "Exhibition",
+      "other": "Other"
+    },
+    "projectStatus": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "rsvpStatus": {
+      "confirmed": "Going",
+      "declined": "Not going",
+      "pending": "Pending"
+    },
+    "privacyLevel": {
+      "public": "Public",
+      "private": "Private"
+    }
   }
 }

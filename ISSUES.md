@@ -98,15 +98,90 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 ## Issue #6.1 — i18n: traducción exhaustiva de strings y locales de fecha
 
+**Estado:** `done`
+**Severidad:** Media (UX)
+**Completado en:** `92694c1` — 2026-04-19
+
+Resuelta la parte de infraestructura (sub-issue #6.1.a) y dividida en cuatro sub-issues por dominio (#6.1.b…#6.1.e) porque la migración completa de ~200–300 strings en 42 archivos excede el alcance de una ejecución. Se implementó la base + migración de fechas + enums compartidos. Los cuatro sub-issues restantes (`login`/`register`/quick wins, eventos/proyectos, seguridad/perfil/notificaciones/mensajería y limpieza final + validación) quedan abajo como `pending` para siguientes runs.
+
+---
+
+## Issue #6.1.a — i18n foundation: date helper, date-fns migration y enums compartidos
+
+**Estado:** `done`
+**Severidad:** Media (UX)
+**Completado en:** `92694c1` — 2026-04-19
+
+Nuevo helper `src/lib/date.ts` con `getLocale()` que lee `i18n.resolvedLanguage` y mapea a locales de `date-fns`, más `formatDate`/`formatDateTime`/`formatTime`/`formatLongDate`. Migrados los 7 callsites de `toLocaleDateString('es-ES', …)` y `toLocaleTimeString('es-ES', …)` a `date-fns` vía el helper (`events/EventsList.tsx`, `events/EventDetail.tsx`, `events/MyEvents.tsx`, `security/BlockedUsers.tsx`, `projects/ProjectDetail.tsx`, `profile/UsernameSettings.tsx`). `SupportPage` traducida completamente (usa `Trans` para el negrilla). `i18n/es.json` + `i18n/en.json` ampliados con `support.*` y nuevas secciones `enums.eventTypes`, `enums.projectStatus`, `enums.rsvpStatus`, `enums.privacyLevel` para centralizar los selectores duplicados que usan `events/projects/security`.
+
+---
+
+## Issue #6.1.b — i18n: login, register y componentes simples
+
 **Estado:** `pending`
 **Severidad:** Media (UX)
 
 ### Tareas
 
-- [ ] Migrar todos los strings literales a `t(...)` en: `events/*`, `projects/*`, `messaging/*`, `notifications/*`, `search/*`, `portfolio/*`, `reviews/*`, `security/*`, `support/*`, `user/*`, `profile/*`, `login`, `register`.
-- [ ] Completar las claves en `src/i18n/es.json` y `src/i18n/en.json` a medida que se traduce (agrupar por dominio: `events.*`, `projects.*`, etc.).
-- [ ] Sustituir `toLocaleDateString('es-ES', ...)` por `date-fns format(..., { locale })` respetando `i18n.resolvedLanguage` (helper `@/lib/date.ts` con `getLocale()`).
-- [ ] Validar que no queden strings hardcoded: script `grep -RE ">[A-Z][a-z]+" src/` de checklist manual o test Cypress con locale `en`.
+- [ ] Migrar strings literales en `src/components/login/*` (LoginForm, LoginStep1, LoginStep2). Incluir mensajes de error/validación y placeholders de formulario.
+- [ ] Migrar strings literales en `src/components/register/*` (CreateAccount, CreateAccountStep1, CreateAccountStep2).
+- [ ] Migrar strings literales en `src/components/reviews/*` (CreateReview, ReviewList) y `src/components/user/DropdownMenuUser.tsx`.
+- [ ] Añadir claves agrupadas `auth.login.*`, `auth.register.*`, `reviews.*` en `es.json`/`en.json`.
+
+### Criterio de aceptación
+- Los flujos de login y register se pueden completar íntegramente en inglés.
+- `grep "->[A-Za-záéíóú]" src/components/{login,register,reviews}` no devuelve strings visibles hardcoded.
+
+---
+
+## Issue #6.1.c — i18n: eventos y proyectos
+
+**Estado:** `pending`
+**Severidad:** Media (UX)
+
+### Tareas
+
+- [ ] Migrar strings literales en `src/components/events/*` (EventCreate, EventDetail, EventsList, MyEvents), incluido el chat del evento, badges de status y confirmaciones.
+- [ ] Migrar strings literales en `src/components/projects/*` (ProjectCreate, ProjectDetail, ProjectsList, MyProjects).
+- [ ] Usar las claves de `enums.eventTypes`, `enums.projectStatus`, `enums.rsvpStatus` para los selectores/badges.
+- [ ] Añadir `events.*` y `projects.*` en `es.json`/`en.json`.
+
+### Criterio de aceptación
+- Crear/ver/editar un evento o proyecto funciona completamente en inglés.
+- Los selectores de tipo/categoría/status leen de `enums.*`.
+
+---
+
+## Issue #6.1.d — i18n: seguridad, perfil, notificaciones y mensajería
+
+**Estado:** `pending`
+**Severidad:** Media (UX)
+
+### Tareas
+
+- [ ] Migrar `src/components/security/*` (BlockedUsers, PrivacySettings, ReportUser) usando `enums.privacyLevel`.
+- [ ] Migrar `src/components/profile/*` (LocationSelector, UsernameSettings) — incluye placeholders, labels y toasts.
+- [ ] Completar `src/components/notifications/*` (NotificationBell, NotificationSettings): strings que hoy siguen hardcoded (toast de error, labels de preferencias).
+- [ ] Migrar `src/components/messaging/*` (ChatList, ChatWindow, MessageBubble, MessagingApp).
+- [ ] Añadir `security.*`, `profile.*`, `messaging.*` y completar `notifications.*` en `es.json`/`en.json`.
+
+### Criterio de aceptación
+- Las páginas de settings (privacidad, perfil, notificaciones) y el chat operan en inglés.
+- Sin strings visibles hardcoded en los componentes listados.
+
+---
+
+## Issue #6.1.e — i18n: rutas, cleanup y validación final
+
+**Estado:** `pending`
+**Severidad:** Media (UX)
+
+### Tareas
+
+- [ ] Revisar y migrar `src/routes/**/*.tsx`/`*.lazy.tsx` (en especial headers y páginas de settings, home, `auth/user/profile`, `auth/user/map`).
+- [ ] Pasar `grep -RE ">[A-Z][a-zñáéíóú]+" src/` tras la migración para confirmar ausencia de strings visibles hardcoded.
+- [ ] Añadir test Cypress (o Vitest + renderizado con locale `en`) que navegue login → search → profile verificando que no aparecen strings en español.
+- [ ] Documentar en README o `OBSERVABILITY.md` el proceso de añadir nuevas traducciones (convención de namespaces, uso de `Trans` con componentes).
 
 ### Criterio de aceptación
 - La app se puede usar completa en inglés sin strings hardcoded.

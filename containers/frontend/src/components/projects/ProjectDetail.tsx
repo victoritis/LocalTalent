@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth'
+import { formatDate } from '@/lib/date'
 
 export function ProjectDetail() {
   const { id } = useParams({ strict: false })
@@ -230,12 +231,12 @@ export function ProjectDetail() {
                       <p className="font-medium">Duración</p>
                       {project.start_date && (
                         <p className="text-sm text-gray-600">
-                          Inicio: {new Date(project.start_date).toLocaleDateString('es-ES')}
+                          Inicio: {formatDate(project.start_date)}
                         </p>
                       )}
                       {project.end_date && (
                         <p className="text-sm text-gray-600">
-                          Fin: {new Date(project.end_date).toLocaleDateString('es-ES')}
+                          Fin: {formatDate(project.end_date)}
                         </p>
                       )}
                     </div>
