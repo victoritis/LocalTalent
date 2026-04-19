@@ -1,12 +1,14 @@
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MapPin, Users, Map as MapIcon, List } from 'lucide-react'
+import { MapPin, Users, Map as MapIcon, List } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { InteractiveMap } from '@/components/map/InteractiveMap'
+import { EmptyState } from '@/components/ui/empty-state'
+import { MapSkeleton } from '@/components/ui/skeleton-presets'
 
 export const Route = createLazyFileRoute('/auth/user/map')({
   component: UserMap
@@ -55,30 +57,48 @@ function UserMap() {
     }
   }, [searchQuery, users])
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/v1/users/map`, {
-        credentials: 'include'
-      })
+  const fetchUsers = useCallback(
+    async (params?: URLSearchParams) => {
+      try {
+        setLoading(true)
+        const url = params
+          ? `${apiUrl}/api/v1/users/map?${params.toString()}`
+          : `${apiUrl}/api/v1/users/map`
+        const response = await fetch(url, { credentials: 'include' })
 
-      if (!response.ok) {
-        throw new Error('Error al cargar usuarios')
+        if (!response.ok) {
+          throw new Error('Error al cargar usuarios')
+        }
+
+        const data = await response.json()
+        setUsers(data.users || [])
+        setFilteredUsers(data.users || [])
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setLoading(false)
       }
+    },
+    [apiUrl],
+  )
 
-      const data = await response.json()
-      setUsers(data.users || [])
-      setFilteredUsers(data.users || [])
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleSearchArea = useCallback(
+    (info: { bounds: { north: number; south: number; east: number; west: number } }) => {
+      const params = new URLSearchParams({
+        north: info.bounds.north.toFixed(6),
+        south: info.bounds.south.toFixed(6),
+        east: info.bounds.east.toFixed(6),
+        west: info.bounds.west.toFixed(6),
+      })
+      fetchUsers(params)
+    },
+    [fetchUsers],
+  )
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4 space-y-6">
+        <MapSkeleton />
       </div>
     )
   }

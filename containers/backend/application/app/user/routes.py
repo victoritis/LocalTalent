@@ -295,6 +295,21 @@ def get_users_for_map():
         # Obtener parámetro de filtro por categoría
         category_filter = request.args.get('category', None)
 
+        def _parse_bound(name):
+            raw = request.args.get(name)
+            if raw is None:
+                return None
+            try:
+                return float(raw)
+            except ValueError:
+                return None
+
+        north = _parse_bound('north')
+        south = _parse_bound('south')
+        east = _parse_bound('east')
+        west = _parse_bound('west')
+        has_bounds = None not in (north, south, east, west)
+
         # Base query: Solo usuarios con ubicación definida y perfiles públicos
         query = User.query.filter(
             User.is_enabled == True,
@@ -307,6 +322,25 @@ def get_users_for_map():
         # Aplicar filtro de categoría si existe
         if category_filter:
             query = query.filter(User.category == category_filter)
+
+        # Filtrar por bounding box del mapa (para "Buscar en esta área")
+        if has_bounds:
+            query = query.filter(
+                User.latitude <= north,
+                User.latitude >= south,
+            )
+            if east >= west:
+                query = query.filter(
+                    User.longitude <= east,
+                    User.longitude >= west,
+                )
+            else:
+                # Caja que cruza el antimeridiano: union de dos rangos
+                query = query.filter(
+                    or_(User.longitude >= west, User.longitude <= east)
+                )
+            # Evitar devolver miles de marcadores cuando la vista es global
+            query = query.limit(500)
 
         users = query.all()
 

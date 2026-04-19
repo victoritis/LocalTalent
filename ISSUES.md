@@ -154,21 +154,11 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 ## Issue #7 — Mejoras del módulo de mapa
 
-**Estado:** `pending`
+**Estado:** `done`
 **Severidad:** Media
+**Completado en:** `80d0374` — 2026-04-19
 
-### Tareas
-
-- [ ] Try/catch en la carga de Leaflet con fallback a lista plana.
-- [ ] Manejar denegación de geolocalización con CTA para introducir ciudad manualmente.
-- [ ] Clustering con `react-leaflet-cluster` o `supercluster` cuando hay >50 markers.
-- [ ] Persistir último center/zoom en localStorage por usuario.
-- [ ] Botón "Buscar en esta área" que refetchea cuando el usuario mueve el mapa.
-- [ ] Ruta desde ubicación del usuario al evento/talento (abrir Google Maps o usar OSRM embebido).
-
-### Criterio de aceptación
-- Mapa nunca se cuelga si falla la carga.
-- Con 500 eventos en pantalla el mapa sigue siendo fluido.
+`InteractiveMap` reescrito: ahora se envuelve con `ErrorBoundary` que, ante un fallo de Leaflet, muestra `ErrorState` + `FallbackList` de hasta 100 usuarios con enlaces directos a perfil. Persistencia de `center`/`zoom` en `localStorage` (`localtalent.map.view`) con `MapStateSync` (listener de `moveend`/`zoomend`), y `AutoFitBounds` que sólo auto-ajusta la primera vez para no pisar pans manuales. `MarkerClusterGroup` ya estaba pero ahora el contenedor usa `aspect-ratio` en lugar de `h-[600px]`, y tiene `role="application"` con `aria-label`. Nuevo botón "Buscar en esta área" (sólo aparece cuando `onSearchArea` está conectado y el usuario ha movido el mapa); en `/auth/user/map` refetchea pasando `north/south/east/west` al endpoint. Backend `GET /api/v1/users/map` ahora acepta `north|south|east|west` (con soporte para cajas que cruzan el antimeridiano) y limita a 500 resultados cuando se pasan bounds. Nuevo hook `useGeolocation` con estados `granted|denied|unavailable|timeout` y callback `onDenied`. `AdvancedSearch.handleUseCurrentLocation` usa el hook; si la respuesta es denegación, aparece un CTA `role="alert"` con input de ciudad que resuelve a coords vía Nominatim. Cada `Popup` incluye un enlace `Cómo llegar` que abre Google Maps con la ruta al talento.
 
 ---
 
