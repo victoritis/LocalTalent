@@ -90,6 +90,7 @@ Añadido modelo `ProfileView` + migración `13_profile_views_username` con índi
 
 **Estado:** `done`
 **Severidad:** Media (UX)
+**Completado en:** `05b9694` — 2026-04-19
 
 Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary` y presets de `Skeleton` (`CardListSkeleton`, `GridCardSkeleton`, `ListRowSkeleton`, `MapSkeleton`) aplicados en `AdvancedSearch`, `PortfolioGallery`, `EventsList`, `ProjectsList`. `ErrorBoundary` envuelve la app y el `__root` route de TanStack. Accesibilidad: `StarRating` expuesto como `radiogroup`/`img` con `aria-label`, `alt` reales en imágenes de portfolio/eventos/proyectos, imágenes con `loading="lazy"`, `aria-hidden` en iconos decorativos y foco visible global en `index.css` sin romper la experiencia de ratón. Infraestructura `react-i18next` montada con detección+persistencia en `localStorage`, locales `es.json`/`en.json`, hook de `useTranslation` disponible y selector de idioma integrado en el dropdown de `NavUser`. Los sub-issues #6.1 (traducción exhaustiva de strings y migración de fechas con `date-fns` locale), #6.2 (a11y + responsive sweep de componentes restantes) y #6.3 (Sentry) quedan abajo.
 
