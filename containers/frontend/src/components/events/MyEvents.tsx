@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatDateTime } from '@/lib/date'
 
 export function MyEvents() {
   const [myEvents, setMyEvents] = useState<any[]>([])
@@ -35,16 +36,7 @@ export function MyEvents() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  const formatDate = (dateString: string) => formatDateTime(dateString, "PPPp")
 
   const EventCard = ({ event, isRSVP = false, rsvpStatus = '' }: any) => (
     <Card className="hover:shadow-lg transition-shadow">

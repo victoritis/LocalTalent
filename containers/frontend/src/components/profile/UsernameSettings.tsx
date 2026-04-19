@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Check, Loader2, X } from 'lucide-react'
+import { formatDate } from '@/lib/date'
 
 interface UsernameSettingsProps {
   currentUsername: string
@@ -98,7 +99,7 @@ export function UsernameSettings({ currentUsername, onChanged }: UsernameSetting
       if (!res.ok) {
         let description = data?.error || 'No se pudo actualizar el username'
         if (res.status === 429 && data?.next_change_at) {
-          const when = new Date(data.next_change_at).toLocaleDateString()
+          const when = formatDate(data.next_change_at)
           description = `Sólo puedes cambiar el username una vez cada 30 días. Próximo cambio disponible: ${when}`
         }
         toast({ title: 'No se pudo guardar', description, variant: 'destructive' })

@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth'
+import { formatDateTime, formatTime } from '@/lib/date'
 
 export function EventDetail() {
   const { id } = useParams({ strict: false })
@@ -153,22 +154,9 @@ export function EventDetail() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  const formatDate = (dateString: string) => formatDateTime(dateString, "PPPPp")
 
-  const formatMessageTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-  }
+  const formatMessageTime = (dateString: string) => formatTime(dateString)
 
   if (loading) {
     return (

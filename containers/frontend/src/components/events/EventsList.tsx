@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GridCardSkeleton } from "@/components/ui/skeleton-presets";
+import { formatDateTime } from "@/lib/date";
 
 export function EventsList() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -35,16 +36,7 @@ export function EventsList() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTime(dateString, "PPPp");
 
   const EventCard = ({ event }: { event: Event }) => (
     <Card className="hover:shadow-lg transition-shadow">

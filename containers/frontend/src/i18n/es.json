@@ -82,5 +82,39 @@
     "label": "Idioma",
     "spanish": "Español",
     "english": "Inglés"
+  },
+  "support": {
+    "title": "Soporte Técnico",
+    "unavailableTitle": "Funcionalidad No Disponible",
+    "unavailableIntro": "Actualmente, la sección de soporte directo a través de esta plataforma no está habilitada.",
+    "contactAdmin": "Si necesitas asistencia o tienes alguna consulta, por favor, <strong>contacta con el administrador de tu organización</strong>. Ellos podrán ayudarte con cualquier incidencia o pregunta que tengas.",
+    "thanks": "Agradecemos tu comprensión.",
+    "teamSignature": "Equipo de la aplicación"
+  },
+  "enums": {
+    "eventTypes": {
+      "networking": "Networking",
+      "workshop": "Taller",
+      "meetup": "Meetup",
+      "conference": "Conferencia",
+      "jamSession": "Jam Session",
+      "exhibition": "Exposición",
+      "other": "Otro"
+    },
+    "projectStatus": {
+      "draft": "Borrador",
+      "active": "Activo",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "rsvpStatus": {
+      "confirmed": "Confirmado",
+      "declined": "No asistiré",
+      "pending": "Pendiente"
+    },
+    "privacyLevel": {
+      "public": "Público",
+      "private": "Privado"
+    }
   }
 }

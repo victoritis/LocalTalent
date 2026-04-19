@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
+import { formatDate as formatLocaleDate } from '@/lib/date'
 
 export function BlockedUsers() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
@@ -45,14 +46,7 @@ export function BlockedUsers() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  }
+  const formatDate = (dateString: string) => formatLocaleDate(dateString, "PPP")
 
   if (loading) {
     return (
