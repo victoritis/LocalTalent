@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { getProjects, Project } from '@/services/projects/projectsApi'
-import { Briefcase, Users, Calendar, Clock } from 'lucide-react'
+import { Briefcase, Users, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { GridCardSkeleton } from '@/components/ui/skeleton-presets'
 
 export function ProjectsList() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -40,7 +42,12 @@ export function ProjectsList() {
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         {project.image_url && (
-          <img src={project.image_url} alt={project.title} className="w-full h-48 object-cover rounded-t-lg mb-4" />
+          <img
+            src={project.image_url}
+            alt={`Imagen del proyecto: ${project.title}`}
+            loading="lazy"
+            className="w-full aspect-video object-cover rounded-t-lg mb-4"
+          />
         )}
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -96,8 +103,8 @@ export function ProjectsList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Clock className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4">
+        <GridCardSkeleton count={6} />
       </div>
     )
   }
@@ -116,9 +123,12 @@ export function ProjectsList() {
 
       {projects.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">No hay proyectos disponibles en este momento</p>
+          <CardContent>
+            <EmptyState
+              icon={Briefcase}
+              title="No hay proyectos disponibles"
+              description="Crea uno nuevo para empezar a encontrar colaboradores."
+            />
           </CardContent>
         </Card>
       ) : (

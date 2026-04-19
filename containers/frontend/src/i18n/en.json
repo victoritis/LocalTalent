@@ -1,0 +1,86 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "back": "Back",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loadingContent": "Loading content",
+    "errorGeneric": "Something went wrong",
+    "errorGenericDescription": "We couldn't complete the operation. Please try again."
+  },
+  "nav": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log out",
+    "events": "Events",
+    "projects": "Projects",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "map": "Map",
+    "search": "Search"
+  },
+  "search": {
+    "title": "Advanced search",
+    "description": "Find nearby talent with custom filters",
+    "placeholder": "Search by name or username...",
+    "category": "Category",
+    "allCategories": "All categories",
+    "skills": "Skills",
+    "addSkill": "Add skill...",
+    "add": "Add",
+    "radius": "Search radius (km)",
+    "useLocation": "Use my current location",
+    "sortBy": "Sort by",
+    "sortRecent": "Most recent",
+    "sortDistance": "Nearest",
+    "sortRating": "Best rated",
+    "clear": "Clear",
+    "resultsFound_one": "{{count}} result found",
+    "resultsFound_other": "{{count}} results found",
+    "noResults": "No results found",
+    "noResultsDescription": "Try increasing the radius or removing a filter.",
+    "errorSearch": "Search error"
+  },
+  "portfolio": {
+    "empty": "No portfolio items yet",
+    "emptyOwnerHint": "Add your first piece to get started",
+    "loadError": "Failed to load portfolio",
+    "image": "Image",
+    "video": "Video",
+    "description": "Description",
+    "delete": "Delete"
+  },
+  "map": {
+    "filterByCategory": "Filter by category",
+    "selectCategory": "Select category",
+    "usersFound_one": "{{count}} user found",
+    "usersFound_other": "{{count}} users found",
+    "loadError": "The map could not be loaded",
+    "fallbackMessage": "Showing the talent list instead of the map.",
+    "searchInArea": "Search this area",
+    "locationDenied": "We couldn't get your location",
+    "enterCityManually": "Enter city manually",
+    "routeHere": "Get directions"
+  },
+  "notifications": {
+    "empty": "You have no notifications",
+    "markAllRead": "Mark all as read",
+    "allTab": "All",
+    "unreadTab": "Unread",
+    "messagesTab": "Messages",
+    "eventsTab": "Events",
+    "systemTab": "System",
+    "loadError": "We couldn't load your notifications"
+  },
+  "language": {
+    "label": "Language",
+    "spanish": "Spanish",
+    "english": "English"
+  }
+}

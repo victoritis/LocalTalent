@@ -8,7 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ChevronLeft, ChevronRight, Image, Video, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Video, X } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ErrorState } from '@/components/ui/error-state'
+import { GridCardSkeleton } from '@/components/ui/skeleton-presets'
 
 interface PortfolioItem {
   id: number
@@ -61,22 +64,18 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
   }
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">
-            Cargando portfolio...
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return <GridCardSkeleton count={6} />
   }
 
   if (error) {
     return (
       <Card>
         <CardContent className="py-8">
-          <div className="text-center text-destructive">{error}</div>
+          <ErrorState
+            title="Error al cargar el portfolio"
+            message={error}
+            onRetry={fetchPortfolio}
+          />
         </CardContent>
       </Card>
     )
@@ -85,14 +84,12 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
   if (!items || items.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-muted-foreground">
-            <Image className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No hay elementos en el portfolio</p>
-            {isOwner && (
-              <p className="text-sm mt-2">Agrega tu primer trabajo para empezar</p>
-            )}
-          </div>
+        <CardContent className="py-4">
+          <EmptyState
+            icon={ImageIcon}
+            title="No hay elementos en el portfolio"
+            description={isOwner ? 'Agrega tu primer trabajo para empezar' : undefined}
+          />
         </CardContent>
       </Card>
     )
@@ -135,7 +132,8 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
               {item.media_type === 'image' ? (
                 <img
                   src={item.media_url}
-                  alt={item.title}
+                  alt={item.description ? `${item.title} — ${item.description}` : item.title}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
@@ -144,9 +142,10 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
                     src={item.media_url}
                     className="w-full h-full object-cover"
                     muted
+                    aria-label={`Video del portfolio: ${item.title}`}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Video className="w-12 h-12 text-white" />
+                    <Video aria-hidden="true" className="w-12 h-12 text-white" />
                   </div>
                 </div>
               )}
@@ -184,13 +183,16 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
                   {selectedItem.media_type === 'image' ? (
                     <img
                       src={selectedItem.media_url}
-                      alt={selectedItem.title}
+                      alt={selectedItem.description
+                        ? `${selectedItem.title} — ${selectedItem.description}`
+                        : selectedItem.title}
                       className="w-full h-full object-contain"
                     />
                   ) : (
                     <video
                       src={selectedItem.media_url}
                       controls
+                      aria-label={`Video: ${selectedItem.title}`}
                       className="w-full h-full"
                     />
                   )}

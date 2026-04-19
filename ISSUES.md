@@ -88,30 +88,66 @@ Añadido modelo `ProfileView` + migración `13_profile_views_username` con índi
 
 ## Issue #6 — UI: estados de carga/error, accesibilidad e i18n
 
+**Estado:** `done`
+**Severidad:** Media (UX)
+
+Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary` y presets de `Skeleton` (`CardListSkeleton`, `GridCardSkeleton`, `ListRowSkeleton`, `MapSkeleton`) aplicados en `AdvancedSearch`, `PortfolioGallery`, `EventsList`, `ProjectsList`. `ErrorBoundary` envuelve la app y el `__root` route de TanStack. Accesibilidad: `StarRating` expuesto como `radiogroup`/`img` con `aria-label`, `alt` reales en imágenes de portfolio/eventos/proyectos, imágenes con `loading="lazy"`, `aria-hidden` en iconos decorativos y foco visible global en `index.css` sin romper la experiencia de ratón. Infraestructura `react-i18next` montada con detección+persistencia en `localStorage`, locales `es.json`/`en.json`, hook de `useTranslation` disponible y selector de idioma integrado en el dropdown de `NavUser`. Los sub-issues #6.1 (traducción exhaustiva de strings y migración de fechas con `date-fns` locale), #6.2 (a11y + responsive sweep de componentes restantes) y #6.3 (Sentry) quedan abajo.
+
+---
+
+## Issue #6.1 — i18n: traducción exhaustiva de strings y locales de fecha
+
 **Estado:** `pending`
 **Severidad:** Media (UX)
 
 ### Tareas
 
-- [ ] Crear componentes reutilizables `<Skeleton />`, `<EmptyState icon title description action />`, `<ErrorState onRetry />`.
-- [ ] Añadir estos estados en: búsqueda avanzada, `InteractiveMap`, `PortfolioGallery`, listado de conversaciones, listado de eventos, listado de proyectos, notificaciones.
-- [ ] Envolver rutas top-level con `<ErrorBoundary>`.
-- [ ] Accesibilidad:
-    - `aria-label` en `StarRating`, botones de icono sin texto, toggles
-    - `alt` real en imágenes de portfolio/eventos (no solo `""`)
-    - Foco visible (no `outline: none` sin reemplazo)
-    - Navegación con Tab completa en todos los modales
-- [ ] Responsive: revisar alturas fijas (`h-[600px]` en `PortfolioGallery`), usar aspect-ratio en lugar.
-- [ ] Integrar `react-i18next`:
-    - `src/i18n/es.json` y `src/i18n/en.json`
-    - Selector de idioma en el header
-    - Fechas con `date-fns` respetando locale
-    - Persistir idioma en localStorage
-- [ ] Sentry (o alternativa) para capturar errores no atrapados en frontend.
+- [ ] Migrar todos los strings literales a `t(...)` en: `events/*`, `projects/*`, `messaging/*`, `notifications/*`, `search/*`, `portfolio/*`, `reviews/*`, `security/*`, `support/*`, `user/*`, `profile/*`, `login`, `register`.
+- [ ] Completar las claves en `src/i18n/es.json` y `src/i18n/en.json` a medida que se traduce (agrupar por dominio: `events.*`, `projects.*`, etc.).
+- [ ] Sustituir `toLocaleDateString('es-ES', ...)` por `date-fns format(..., { locale })` respetando `i18n.resolvedLanguage` (helper `@/lib/date.ts` con `getLocale()`).
+- [ ] Validar que no queden strings hardcoded: script `grep -RE ">[A-Z][a-z]+" src/` de checklist manual o test Cypress con locale `en`.
 
 ### Criterio de aceptación
 - La app se puede usar completa en inglés sin strings hardcoded.
-- Lighthouse accessibility score ≥ 90.
+- Cambiar idioma desde el selector afecta inmediatamente a todas las vistas cargadas.
+
+---
+
+## Issue #6.2 — A11y y responsive en componentes restantes
+
+**Estado:** `pending`
+**Severidad:** Media (UX)
+
+### Tareas
+
+- [ ] `aria-label` en todos los botones sólo-icono restantes (`containers/frontend/src/components/**`), revisión con `grep -RE "<Button.*size=\"icon\"" src/` para confirmar.
+- [ ] Aplicar `EmptyState`/`ErrorState`/`Skeleton` a: `ChatList`, `MessagingApp`, `NotificationBell` listings, `MyEvents`, `MyProjects`, `ReviewList`, `BlockedUsers`.
+- [ ] Asegurar `aria-labelledby`/`aria-describedby` en todos los `<Dialog>` y foco correcto al abrir.
+- [ ] Revisar contraste de colores custom (badges, shimmer) con Lighthouse contrast check.
+- [ ] Revisar alturas fijas (`h-[400px]`, `min-h-*`) y reemplazar por `aspect-ratio` cuando sea posible.
+- [ ] Añadir test Cypress de navegación por teclado que recorre el flujo de login → search → profile sin ratón.
+
+### Criterio de aceptación
+- Lighthouse accessibility score ≥ 90 en las rutas principales.
+- No hay botones sólo-icono sin `aria-label`.
+
+---
+
+## Issue #6.3 — Observabilidad frontend (Sentry/alternativa)
+
+**Estado:** `pending`
+**Severidad:** Baja (calidad)
+
+### Tareas
+
+- [ ] Integrar `@sentry/react` con `init()` condicional a env var `VITE_SENTRY_DSN`.
+- [ ] Conectar `ErrorBoundary` (`src/components/error/ErrorBoundary.tsx`) via `onError` a `Sentry.captureException`.
+- [ ] Instrumentar `window.addEventListener('error' | 'unhandledrejection')` en `main.tsx` sin duplicar el envío.
+- [ ] Adjuntar `release` y `environment` a partir de Vite env vars.
+- [ ] Documentar en `NOTIFICATIONS_SETUP.md` (o nuevo `OBSERVABILITY.md`) cómo provisionar el DSN por entorno.
+
+### Criterio de aceptación
+- Un error lanzado manualmente en dev llega a Sentry (o se registra localmente si DSN no está seteado).
 
 ---
 

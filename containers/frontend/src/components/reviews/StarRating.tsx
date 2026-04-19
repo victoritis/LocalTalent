@@ -30,8 +30,16 @@ export function StarRating({
     }
   }
 
+  const ariaLabel = interactive
+    ? `Valoración actual: ${rating} de ${maxRating} estrellas`
+    : `${rating} de ${maxRating} estrellas`
+
   return (
-    <div className={cn('flex items-center gap-1', className)}>
+    <div
+      role={interactive ? 'radiogroup' : 'img'}
+      aria-label={ariaLabel}
+      className={cn('flex items-center gap-1', className)}
+    >
       {Array.from({ length: maxRating }, (_, index) => {
         const starValue = index + 1
         const isFilled = starValue <= rating
@@ -41,15 +49,20 @@ export function StarRating({
           <button
             key={index}
             type="button"
+            role={interactive ? 'radio' : undefined}
+            aria-checked={interactive ? starValue === Math.round(rating) : undefined}
+            aria-label={`${starValue} ${starValue === 1 ? 'estrella' : 'estrellas'}`}
+            tabIndex={interactive ? 0 : -1}
             onClick={() => handleClick(starValue)}
             disabled={!interactive}
             className={cn(
-              'relative',
+              'relative rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               interactive && 'cursor-pointer hover:scale-110 transition-transform',
               !interactive && 'cursor-default'
             )}
           >
             <Star
+              aria-hidden="true"
               className={cn(
                 sizeClasses[size],
                 isFilled

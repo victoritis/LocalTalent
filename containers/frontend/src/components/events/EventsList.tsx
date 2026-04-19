@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { getEvents, getNearbyEvents, Event } from "@/services/events/eventsApi";
-import { Calendar, MapPin, Users, Video, Clock } from "lucide-react";
+import { Calendar, MapPin, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/empty-state";
+import { GridCardSkeleton } from "@/components/ui/skeleton-presets";
 
 export function EventsList() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -48,7 +50,12 @@ export function EventsList() {
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         {event.image_url && (
-          <img src={event.image_url} alt={event.title} className="w-full h-48 object-cover rounded-t-lg mb-4" />
+          <img
+            src={event.image_url}
+            alt={`Imagen del evento: ${event.title}`}
+            loading="lazy"
+            className="w-full aspect-video object-cover rounded-t-lg mb-4"
+          />
         )}
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -121,8 +128,8 @@ export function EventsList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Clock className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4">
+        <GridCardSkeleton count={6} />
       </div>
     );
   }
@@ -148,9 +155,12 @@ export function EventsList() {
         <TabsContent value="all" className="mt-6">
           {events.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No hay eventos disponibles en este momento</p>
+              <CardContent>
+                <EmptyState
+                  icon={Calendar}
+                  title="No hay eventos disponibles"
+                  description="Vuelve pronto o crea uno nuevo para empezar a conectar con talentos."
+                />
               </CardContent>
             </Card>
           ) : (
@@ -165,12 +175,12 @@ export function EventsList() {
         <TabsContent value="nearby" className="mt-6">
           {nearbyEvents.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No hay eventos cercanos a tu ubicación</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Asegúrate de tener tu ubicación configurada en tu perfil
-                </p>
+              <CardContent>
+                <EmptyState
+                  icon={MapPin}
+                  title="No hay eventos cercanos a tu ubicación"
+                  description="Asegúrate de tener tu ubicación configurada en tu perfil."
+                />
               </CardContent>
             </Card>
           ) : (

@@ -21,8 +21,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { StarRatingDisplay } from '@/components/reviews/StarRating'
-import { SlidersHorizontal, Search, MapPin, X, Loader2, Bookmark } from 'lucide-react'
+import { SlidersHorizontal, Search, MapPin, X, Loader2, Bookmark, UserSearch } from 'lucide-react'
 import { toast } from 'sonner'
+import { EmptyState } from '@/components/ui/empty-state'
+import { CardListSkeleton } from '@/components/ui/skeleton-presets'
 
 interface SearchFilters {
   query?: string
@@ -64,6 +66,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
   const [filters, setFilters] = useState<SearchFilters>(initialFilters || {})
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   const [totalResults, setTotalResults] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([])
@@ -91,6 +94,7 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
   const handleSearch = async () => {
     try {
       setLoading(true)
+      setHasSearched(true)
 
       // Construir query params
       const params = new URLSearchParams()
@@ -364,8 +368,19 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
         </div>
       )}
 
+      {loading && <CardListSkeleton count={3} />}
+
+      {!loading && hasSearched && results.length === 0 && (
+        <EmptyState
+          icon={UserSearch}
+          title="No se encontraron resultados"
+          description="Prueba a ampliar el radio o eliminar algún filtro."
+          action={{ label: 'Limpiar filtros', onClick: clearFilters }}
+        />
+      )}
+
       <div className="grid gap-4">
-        {results.map((user) => (
+        {!loading && results.map((user) => (
           <Card key={user.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">

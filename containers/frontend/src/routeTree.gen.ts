@@ -28,6 +28,9 @@ const IndexLazyImport = createFileRoute('/')()
 const RegisterCreateAccountLazyImport = createFileRoute(
   '/register/create-account',
 )()
+const ProfileDeleteAccountLazyImport = createFileRoute(
+  '/profile/delete-account',
+)()
 const LoginResetPasswordLazyImport = createFileRoute('/login/reset-password')()
 const LoginRecoverPasswordLazyImport = createFileRoute(
   '/login/recover-password',
@@ -87,6 +90,14 @@ const RegisterCreateAccountLazyRoute = RegisterCreateAccountLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
   import('./routes/register/create-account.lazy').then((d) => d.Route),
+)
+
+const ProfileDeleteAccountLazyRoute = ProfileDeleteAccountLazyImport.update({
+  id: '/profile/delete-account',
+  path: '/profile/delete-account',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/profile/delete-account.lazy').then((d) => d.Route),
 )
 
 const LoginResetPasswordLazyRoute = LoginResetPasswordLazyImport.update({
@@ -370,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginResetPasswordLazyImport
       parentRoute: typeof LoginImport
     }
+    '/profile/delete-account': {
+      id: '/profile/delete-account'
+      path: '/profile/delete-account'
+      fullPath: '/profile/delete-account'
+      preLoaderRoute: typeof ProfileDeleteAccountLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/register/create-account': {
       id: '/register/create-account'
       path: '/register/create-account'
@@ -610,6 +628,7 @@ export interface FileRoutesByFullPath {
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
+  '/profile/delete-account': typeof ProfileDeleteAccountLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
@@ -640,6 +659,7 @@ export interface FileRoutesByTo {
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
+  '/profile/delete-account': typeof ProfileDeleteAccountLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
@@ -674,6 +694,7 @@ export interface FileRoutesById {
   '/auth/support': typeof AuthSupportLazyRoute
   '/login/recover-password': typeof LoginRecoverPasswordLazyRoute
   '/login/reset-password': typeof LoginResetPasswordLazyRoute
+  '/profile/delete-account': typeof ProfileDeleteAccountLazyRoute
   '/register/create-account': typeof RegisterCreateAccountLazyRoute
   '/login/': typeof LoginIndexRouteRoute
   '/auth/superadmin/dashboard': typeof AuthSuperadminDashboardRoute
@@ -709,6 +730,7 @@ export interface FileRouteTypes {
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
+    | '/profile/delete-account'
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
@@ -738,6 +760,7 @@ export interface FileRouteTypes {
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
+    | '/profile/delete-account'
     | '/register/create-account'
     | '/login'
     | '/auth/superadmin/dashboard'
@@ -770,6 +793,7 @@ export interface FileRouteTypes {
     | '/auth/support'
     | '/login/recover-password'
     | '/login/reset-password'
+    | '/profile/delete-account'
     | '/register/create-account'
     | '/login/'
     | '/auth/superadmin/dashboard'
@@ -793,6 +817,7 @@ export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   AuthRoute: typeof AuthRouteWithChildren
   LoginRoute: typeof LoginRouteWithChildren
+  ProfileDeleteAccountLazyRoute: typeof ProfileDeleteAccountLazyRoute
   RegisterCreateAccountLazyRoute: typeof RegisterCreateAccountLazyRoute
 }
 
@@ -800,6 +825,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   AuthRoute: AuthRouteWithChildren,
   LoginRoute: LoginRouteWithChildren,
+  ProfileDeleteAccountLazyRoute: ProfileDeleteAccountLazyRoute,
   RegisterCreateAccountLazyRoute: RegisterCreateAccountLazyRoute,
 }
 
@@ -816,6 +842,7 @@ export const routeTree = rootRoute
         "/",
         "/auth",
         "/login",
+        "/profile/delete-account",
         "/register/create-account"
       ]
     },
@@ -909,6 +936,9 @@ export const routeTree = rootRoute
     "/login/reset-password": {
       "filePath": "login/reset-password.lazy.tsx",
       "parent": "/login"
+    },
+    "/profile/delete-account": {
+      "filePath": "profile/delete-account.lazy.tsx"
     },
     "/register/create-account": {
       "filePath": "register/create-account.lazy.tsx"
