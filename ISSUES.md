@@ -138,7 +138,7 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 **Estado:** `done`
 **Severidad:** Baja (calidad)
-**Completado en:** `<sha>` — 2026-04-19
+**Completado en:** `ef5d470` — 2026-04-19
 
 Añadido `@sentry/react` con helper `src/lib/sentry.ts` que inicializa condicional a `VITE_SENTRY_DSN`, respetando `VITE_SENTRY_ENVIRONMENT`/`VITE_SENTRY_RELEASE` y ratios (`TRACES_SAMPLE_RATE`, `REPLAYS_*`). `initSentry()` se llama en `main.tsx` antes de los listeners globales, de modo que la integración `GlobalHandlers` de Sentry (que maneja `error` y `unhandledrejection`) se registra primero y no se duplica con los handlers de auto-reload de módulos dinámicos. `ErrorBoundary` reenvía todos los errores a `Sentry.captureException` vía el helper `captureException`, que además hace fallback a `console.error` si la integración no está activa. Nuevos tipos en `vite-env.d.ts` para las env vars y guía completa de provisioning en `OBSERVABILITY.md`.
 
