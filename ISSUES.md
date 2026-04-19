@@ -156,6 +156,7 @@ Creados los componentes reutilizables `EmptyState`, `ErrorState`, `ErrorBoundary
 
 **Estado:** `done`
 **Severidad:** Media
+**Completado en:** `80d0374` — 2026-04-19
 
 `InteractiveMap` reescrito: ahora se envuelve con `ErrorBoundary` que, ante un fallo de Leaflet, muestra `ErrorState` + `FallbackList` de hasta 100 usuarios con enlaces directos a perfil. Persistencia de `center`/`zoom` en `localStorage` (`localtalent.map.view`) con `MapStateSync` (listener de `moveend`/`zoomend`), y `AutoFitBounds` que sólo auto-ajusta la primera vez para no pisar pans manuales. `MarkerClusterGroup` ya estaba pero ahora el contenedor usa `aspect-ratio` en lugar de `h-[600px]`, y tiene `role="application"` con `aria-label`. Nuevo botón "Buscar en esta área" (sólo aparece cuando `onSearchArea` está conectado y el usuario ha movido el mapa); en `/auth/user/map` refetchea pasando `north/south/east/west` al endpoint. Backend `GET /api/v1/users/map` ahora acepta `north|south|east|west` (con soporte para cajas que cruzan el antimeridiano) y limita a 500 resultados cuando se pasan bounds. Nuevo hook `useGeolocation` con estados `granted|denied|unavailable|timeout` y callback `onDenied`. `AdvancedSearch.handleUseCurrentLocation` usa el hook; si la respuesta es denegación, aparece un CTA `role="alert"` con input de ciudad que resuelve a coords vía Nominatim. Cada `Popup` incluye un enlace `Cómo llegar` que abre Google Maps con la ruta al talento.
 
