@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, Languages, LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Avatar,
@@ -14,6 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -25,6 +29,7 @@ import {
 
 import { useAuth } from "@/auth"; // Asegúrate de que la ruta sea correcta
 import { useRouter } from "@tanstack/react-router"; // Asegúrate de que TanStack Router esté instalado
+import { LANGUAGES } from "@/i18n";
 
 export function NavUser({
   user,
@@ -34,7 +39,8 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const { logout, session } = useAuth();
   const router = useRouter();
-  
+  const { t, i18n } = useTranslation();
+
   const handleLogout = () => {
     logout();
     router.navigate({ to: "/login" });
@@ -85,10 +91,35 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Languages aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <span>{t("language.label")}</span>
+                  <span className="ml-auto text-xs uppercase text-muted-foreground">
+                    {i18n.resolvedLanguage}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {LANGUAGES.map((lang) => (
+                    <DropdownMenuItem
+                      key={lang.code}
+                      onSelect={() => i18n.changeLanguage(lang.code)}
+                      aria-current={lang.code === i18n.resolvedLanguage ? "true" : undefined}
+                    >
+                      <span className="uppercase mr-2 text-xs w-6 text-muted-foreground">
+                        {lang.code}
+                      </span>
+                      {t(lang.labelKey)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+              <LogOut aria-hidden="true" className="mr-2 h-4 w-4" />
+              <span>{t("nav.logout")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

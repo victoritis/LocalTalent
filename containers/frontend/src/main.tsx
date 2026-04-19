@@ -3,9 +3,11 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 
 import { routeTree } from "./routeTree.gen";
 import { AuthProvider, useAuth } from "./auth";
+import "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 import { Toaster } from "@/components/ui/sonner"; // Importar Toaster
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 // Manejo de errores de importación dinámica
 // Esto evita errores cuando el navegador tiene cacheada una versión antigua
@@ -117,10 +119,12 @@ function InnerApp() {
 
 function App() {
   return (
-    <AuthProvider>
-      <InnerApp />
-      <Toaster richColors position="top-right" closeButton theme="system" />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <InnerApp />
+        <Toaster richColors position="top-right" closeButton theme="system" />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,0 +1,86 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "search": "Buscar",
+    "back": "Volver",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "loadingContent": "Cargando contenido",
+    "errorGeneric": "Algo salió mal",
+    "errorGenericDescription": "No se pudo completar la operación. Inténtalo de nuevo."
+  },
+  "nav": {
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "events": "Eventos",
+    "projects": "Proyectos",
+    "messages": "Mensajes",
+    "notifications": "Notificaciones",
+    "map": "Mapa",
+    "search": "Buscar"
+  },
+  "search": {
+    "title": "Búsqueda Avanzada",
+    "description": "Encuentra talentos cercanos con filtros personalizados",
+    "placeholder": "Buscar por nombre o username...",
+    "category": "Categoría",
+    "allCategories": "Todas las categorías",
+    "skills": "Habilidades",
+    "addSkill": "Añadir habilidad...",
+    "add": "Añadir",
+    "radius": "Radio de búsqueda (km)",
+    "useLocation": "Usar mi ubicación actual",
+    "sortBy": "Ordenar por",
+    "sortRecent": "Más recientes",
+    "sortDistance": "Más cercanos",
+    "sortRating": "Mejor valorados",
+    "clear": "Limpiar",
+    "resultsFound_one": "{{count}} resultado encontrado",
+    "resultsFound_other": "{{count}} resultados encontrados",
+    "noResults": "No se encontraron resultados",
+    "noResultsDescription": "Prueba a ampliar el radio o eliminar algún filtro.",
+    "errorSearch": "Error al realizar la búsqueda"
+  },
+  "portfolio": {
+    "empty": "No hay elementos en el portfolio",
+    "emptyOwnerHint": "Agrega tu primer trabajo para empezar",
+    "loadError": "Error al cargar el portfolio",
+    "image": "Imagen",
+    "video": "Video",
+    "description": "Descripción",
+    "delete": "Eliminar"
+  },
+  "map": {
+    "filterByCategory": "Filtrar por categoría",
+    "selectCategory": "Seleccionar categoría",
+    "usersFound_one": "{{count}} usuario encontrado",
+    "usersFound_other": "{{count}} usuarios encontrados",
+    "loadError": "No se pudo cargar el mapa",
+    "fallbackMessage": "Mostrando lista de talentos en vez del mapa.",
+    "searchInArea": "Buscar en esta área",
+    "locationDenied": "No hemos podido obtener tu ubicación",
+    "enterCityManually": "Introducir ciudad manualmente",
+    "routeHere": "Cómo llegar"
+  },
+  "notifications": {
+    "empty": "No tienes notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "allTab": "Todas",
+    "unreadTab": "No leídas",
+    "messagesTab": "Mensajes",
+    "eventsTab": "Eventos",
+    "systemTab": "Sistema",
+    "loadError": "No pudimos cargar tus notificaciones"
+  },
+  "language": {
+    "label": "Idioma",
+    "spanish": "Español",
+    "english": "Inglés"
+  }
+}
