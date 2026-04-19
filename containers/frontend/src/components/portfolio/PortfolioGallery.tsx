@@ -210,8 +210,9 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
                         goToPrevious()
                       }}
                       disabled={currentIndex === 0}
+                      aria-label="Elemento anterior"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                     </Button>
                     <Button
                       variant="outline"
@@ -222,8 +223,9 @@ export function PortfolioGallery({ username, isOwner = false, onDelete }: Portfo
                         goToNext()
                       }}
                       disabled={currentIndex === items.length - 1}
+                      aria-label="Elemento siguiente"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </>
                 )}

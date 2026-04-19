@@ -4,6 +4,7 @@ import { ChatList } from './ChatList'
 import { ChatWindow } from './ChatWindow'
 import { Conversation } from '@/services/messaging/messagingApi'
 import { MessageSquare } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export function MessagingApp() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
@@ -12,7 +13,7 @@ export function MessagingApp() {
     <div className="container mx-auto p-4 max-w-7xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <MessageSquare className="w-8 h-8" />
+          <MessageSquare className="w-8 h-8" aria-hidden="true" />
           Mensajes
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -42,13 +43,12 @@ export function MessagingApp() {
                 onBack={() => setSelectedConversation(null)}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <MessageSquare className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">Selecciona una conversación</h3>
-                <p className="text-sm text-muted-foreground">
-                  Elige una conversación de la lista para comenzar a chatear
-                </p>
-              </div>
+              <EmptyState
+                icon={MessageSquare}
+                title="Selecciona una conversación"
+                description="Elige una conversación de la lista para comenzar a chatear"
+                className="h-full"
+              />
             )}
           </div>
         </div>

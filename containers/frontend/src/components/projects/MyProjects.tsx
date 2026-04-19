@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { getMyProjects, getMyMemberships, getMyProjectInvitations } from '@/services/projects/projectsApi'
-import { Briefcase, Users, Mail, Clock } from 'lucide-react'
+import { Briefcase, Users, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { EmptyState } from '@/components/ui/empty-state'
+import { GridCardSkeleton } from '@/components/ui/skeleton-presets'
 
 export function MyProjects() {
+  const navigate = useNavigate()
   const [myProjects, setMyProjects] = useState<any[]>([])
   const [memberships, setMemberships] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
@@ -146,8 +149,8 @@ export function MyProjects() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Clock className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4">
+        <GridCardSkeleton count={6} />
       </div>
     )
   }
@@ -156,7 +159,7 @@ export function MyProjects() {
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Briefcase className="h-8 w-8" />
+          <Briefcase className="h-8 w-8" aria-hidden="true" />
           Mis Proyectos
         </h1>
         <p className="text-gray-600">Gestiona tus proyectos y colaboraciones</p>
@@ -178,15 +181,14 @@ export function MyProjects() {
         {/* Proyectos Creados */}
         <TabsContent value="created">
           {myProjects.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">Aún no has creado ningún proyecto</p>
-                <Link to="/auth/projects/create">
-                  <Button>Crear Primer Proyecto</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Briefcase}
+              title="Aún no has creado ningún proyecto"
+              action={{
+                label: "Crear Primer Proyecto",
+                onClick: () => navigate({ to: "/auth/projects/create" }),
+              }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myProjects.map((project) => (
@@ -199,15 +201,14 @@ export function MyProjects() {
         {/* Colaboraciones */}
         <TabsContent value="memberships">
           {memberships.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">No eres miembro de ningún proyecto</p>
-                <Link to="/auth/projects">
-                  <Button>Explorar Proyectos</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Users}
+              title="No eres miembro de ningún proyecto"
+              action={{
+                label: "Explorar Proyectos",
+                onClick: () => navigate({ to: "/auth/projects" }),
+              }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {memberships.map((membership) => (
@@ -224,12 +225,7 @@ export function MyProjects() {
         {/* Invitaciones */}
         <TabsContent value="invitations">
           {invitations.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Mail className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No tienes invitaciones pendientes</p>
-              </CardContent>
-            </Card>
+            <EmptyState icon={Mail} title="No tienes invitaciones pendientes" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {invitations.map((invitation) => (

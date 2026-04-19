@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { formatDate as formatLocaleDate } from '@/lib/date'
+import { EmptyState } from '@/components/ui/empty-state'
+import { CardListSkeleton } from '@/components/ui/skeleton-presets'
 
 export function BlockedUsers() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
@@ -50,8 +52,8 @@ export function BlockedUsers() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <CardListSkeleton count={3} />
       </div>
     )
   }
@@ -60,20 +62,18 @@ export function BlockedUsers() {
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <UserX className="h-8 w-8" />
+          <UserX className="h-8 w-8" aria-hidden="true" />
           Usuarios Bloqueados
         </h1>
         <p className="text-gray-600">Gestiona los usuarios que has bloqueado</p>
       </div>
 
       {blockedUsers.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 mb-2">No has bloqueado a ningún usuario</p>
-            <p className="text-sm text-gray-500">Los usuarios bloqueados no podrán interactuar contigo</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Shield}
+          title="No has bloqueado a ningún usuario"
+          description="Los usuarios bloqueados no podrán interactuar contigo"
+        />
       ) : (
         <div className="space-y-4">
           {blockedUsers.map((blocked) => (

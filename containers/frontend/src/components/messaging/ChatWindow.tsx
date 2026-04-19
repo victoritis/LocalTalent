@@ -196,8 +196,8 @@ export function ChatWindow({ conversationId, otherUser, onBack }: ChatWindowProp
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b bg-card">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="w-5 h-5" />
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Volver a conversaciones">
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </Button>
         <Avatar className="w-10 h-10">
           <AvatarImage src={otherUser.profile_image} alt={otherUser.username} />
@@ -262,11 +262,16 @@ export function ChatWindow({ conversationId, otherUser, onBack }: ChatWindowProp
             disabled={sending}
             className="flex-1"
           />
-          <Button type="submit" disabled={sending || !inputValue.trim()} size="icon">
+          <Button
+            type="submit"
+            disabled={sending || !inputValue.trim()}
+            size="icon"
+            aria-label="Enviar mensaje"
+          >
             {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4" aria-hidden="true" />
             )}
           </Button>
         </div>
