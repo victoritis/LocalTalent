@@ -193,7 +193,7 @@ Nuevo helper `src/lib/date.ts` con `getLocale()` que lee `i18n.resolvedLanguage`
 
 **Estado:** `done`
 **Severidad:** Media (UX)
-**Completado en:** `<sha>` — 2026-04-19
+**Completado en:** `f4fd9d8` — 2026-04-19
 
 Completados los tres items centrales (aria-label sweep, presets de empty/error/skeleton, auditoría de Dialogs). Las dos tareas de QA visual/e2e (Lighthouse + Cypress) quedan aisladas en #6.2.b porque requieren herramienta externa y configuración propia.
 
