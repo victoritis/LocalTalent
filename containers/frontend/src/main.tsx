@@ -8,6 +8,9 @@ import "./index.css";
 import "leaflet/dist/leaflet.css";
 import { Toaster } from "@/components/ui/sonner"; // Importar Toaster
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { initSentry } from "@/lib/sentry";
+
+initSentry();
 
 // Manejo de errores de importación dinámica
 // Esto evita errores cuando el navegador tiene cacheada una versión antigua
