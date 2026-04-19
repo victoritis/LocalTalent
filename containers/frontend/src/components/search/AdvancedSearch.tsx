@@ -25,6 +25,7 @@ import { SlidersHorizontal, Search, MapPin, X, Loader2, Bookmark, UserSearch } f
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CardListSkeleton } from '@/components/ui/skeleton-presets'
+import { useGeolocation } from '@/hooks/useGeolocation'
 
 interface SearchFilters {
   query?: string
@@ -71,6 +72,9 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
   const [totalPages, setTotalPages] = useState(0)
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([])
   const [skillInput, setSkillInput] = useState('')
+  const [manualCity, setManualCity] = useState('')
+  const [locationDenied, setLocationDenied] = useState(false)
+  const { request: requestGeolocation, status: geoStatus } = useGeolocation()
   const apiUrl = import.meta.env.VITE_REACT_APP_API_URL
 
   useEffect(() => {
@@ -130,23 +134,47 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
     }
   }
 
-  const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFilters({
-            ...filters,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          })
-          toast.success('Ubicación obtenida')
-        },
-        () => {
-          toast.error('No se pudo obtener la ubicación')
-        }
-      )
+  const handleUseCurrentLocation = async () => {
+    setLocationDenied(false)
+    const coords = await requestGeolocation({
+      onDenied: () => setLocationDenied(true),
+    })
+    if (coords) {
+      setFilters((prev) => ({
+        ...prev,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      }))
+      toast.success('Ubicación obtenida')
     } else {
-      toast.error('Geolocalización no disponible')
+      toast.error('No se pudo obtener la ubicación')
+    }
+  }
+
+  const handleUseManualCity = async () => {
+    const query = manualCity.trim()
+    if (!query) return
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
+        { headers: { Accept: 'application/json' } },
+      )
+      if (!res.ok) throw new Error('lookup_failed')
+      const data = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>
+      if (!data.length) {
+        toast.error('No encontramos esa ciudad')
+        return
+      }
+      const { lat, lon } = data[0]
+      setFilters((prev) => ({
+        ...prev,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lon),
+      }))
+      toast.success(`Ubicación establecida: ${data[0].display_name.split(',')[0]}`)
+      setLocationDenied(false)
+    } catch {
+      toast.error('No pudimos resolver esa ciudad')
     }
   }
 
@@ -309,15 +337,42 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
                   variant="outline"
                   size="sm"
                   onClick={handleUseCurrentLocation}
+                  disabled={geoStatus === 'requesting'}
                   className="w-full mt-2"
                 >
-                  <MapPin className="h-4 w-4 mr-2" />
+                  {geoStatus === 'requesting' ? (
+                    <Loader2 aria-hidden="true" className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <MapPin aria-hidden="true" className="h-4 w-4 mr-2" />
+                  )}
                   Usar mi ubicación actual
                 </Button>
                 {filters.latitude && filters.longitude && (
                   <p className="text-xs text-muted-foreground">
                     Ubicación: {filters.latitude.toFixed(4)}, {filters.longitude.toFixed(4)}
                   </p>
+                )}
+                {locationDenied && (
+                  <div
+                    role="alert"
+                    className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm space-y-2"
+                  >
+                    <p className="text-destructive">
+                      No hemos podido acceder a tu ubicación. Introduce una ciudad manualmente:
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Madrid, Lisboa, París..."
+                        value={manualCity}
+                        onChange={(e) => setManualCity(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleUseManualCity()}
+                        aria-label="Ciudad para buscar"
+                      />
+                      <Button type="button" size="sm" onClick={handleUseManualCity}>
+                        Usar
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
 
