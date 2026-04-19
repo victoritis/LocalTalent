@@ -22,6 +22,8 @@ import {
 } from '@/services/notifications/notificationsApi'
 import { useSocket } from '@/context/socket'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ListRowSkeleton } from '@/components/ui/skeleton-presets'
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
@@ -151,12 +153,22 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={
+            unreadCount > 0
+              ? `Notificaciones (${unreadCount} sin leer)`
+              : 'Notificaciones'
+          }
+        >
+          <Bell className="w-5 h-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs"
+              aria-hidden="true"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -181,16 +193,15 @@ export function NotificationBell() {
 
         <ScrollArea className="h-[400px]">
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <p className="text-sm text-muted-foreground">Cargando...</p>
+            <div className="p-3">
+              <ListRowSkeleton count={4} />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-center p-4">
-              <Bell className="w-8 h-8 text-muted-foreground mb-2 opacity-50" />
-              <p className="text-sm text-muted-foreground">
-                No hay notificaciones
-              </p>
-            </div>
+            <EmptyState
+              icon={Bell}
+              title="No hay notificaciones"
+              className="py-8"
+            />
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => (
@@ -235,12 +246,13 @@ export function NotificationBell() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Eliminar notificación"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDelete(notification.id)
                         }}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>

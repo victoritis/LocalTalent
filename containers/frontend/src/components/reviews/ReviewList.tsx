@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { StarRating, StarRatingDisplay } from './StarRating'
+import { StarRating } from './StarRating'
 import { MessageSquare } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ErrorState } from '@/components/ui/error-state'
+import { CardListSkeleton } from '@/components/ui/skeleton-presets'
+import { formatDate } from '@/lib/date'
 
 interface Review {
   id: number
@@ -58,24 +60,16 @@ export function ReviewList({ username, showAverage = true }: ReviewListProps) {
   }
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">
-            Cargando valoraciones...
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return <CardListSkeleton count={2} />
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center text-destructive">{error}</div>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="No se pudieron cargar las valoraciones"
+        message={error}
+        onRetry={fetchReviews}
+      />
     )
   }
 
@@ -98,15 +92,11 @@ export function ReviewList({ username, showAverage = true }: ReviewListProps) {
 
       {/* Lista de reviews */}
       {reviews.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Aún no hay valoraciones</p>
-              <p className="text-sm mt-2">Sé el primero en valorar a este talento</p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="Aún no hay valoraciones"
+          description="Sé el primero en valorar a este talento"
+        />
       ) : (
         <div className="space-y-4">
           {reviews.map((review) => (
@@ -134,9 +124,7 @@ export function ReviewList({ username, showAverage = true }: ReviewListProps) {
                   <div className="text-right">
                     <StarRating rating={review.rating} size="sm" />
                     <div className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(review.created_at), "d 'de' MMMM, yyyy", {
-                        locale: es,
-                      })}
+                      {formatDate(review.created_at, "PPP")}
                     </div>
                   </div>
                 </div>

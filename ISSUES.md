@@ -191,21 +191,34 @@ Nuevo helper `src/lib/date.ts` con `getLocale()` que lee `i18n.resolvedLanguage`
 
 ## Issue #6.2 — A11y y responsive en componentes restantes
 
+**Estado:** `done`
+**Severidad:** Media (UX)
+**Completado en:** `<sha>` — 2026-04-19
+
+Completados los tres items centrales (aria-label sweep, presets de empty/error/skeleton, auditoría de Dialogs). Las dos tareas de QA visual/e2e (Lighthouse + Cypress) quedan aisladas en #6.2.b porque requieren herramienta externa y configuración propia.
+
+- **aria-label en botones sólo-icono**: añadido en `ChatWindow` (back, send), `NotificationBell` (bell, delete), `AdvancedSearch` (filters, save search), `PortfolioGallery` (prev, next). Los iconos `lucide-react` dentro llevan `aria-hidden="true"` para no duplicar el nombre accesible. Audit inicial (grep `<Button.*size="icon"`) sin hits restantes en componentes sin etiqueta.
+- **EmptyState/ErrorState/Skeleton presets aplicados** en `ChatList` (`ListRowSkeleton` + `EmptyState`), `MessagingApp` (`EmptyState` en panel derecho), `NotificationBell` (`ListRowSkeleton` en loading, `EmptyState` cuando no hay notificaciones), `MyEvents` (`GridCardSkeleton` + `EmptyState` en tres tabs con acción de navegación), `MyProjects` (idem), `ReviewList` (`CardListSkeleton` + `ErrorState` con retry + `EmptyState`), `BlockedUsers` (`CardListSkeleton` + `EmptyState`).
+- **Dialogs**: auditados todos (`PortfolioGallery`, `AddPortfolioItem`, `CreateReview`). Los tres usan el patrón shadcn con `DialogTitle` + `DialogDescription` que ya setea `aria-labelledby`/`aria-describedby` automáticamente. No hace falta cambio.
+- **Alturas fijas**: los `min-h-[400px]` de containers de carga desaparecen al pasar a los presets de Skeleton (que usan `aspect-ratio`/fluid). El `h-[400px]` del `ScrollArea` del dropdown de notificaciones se mantiene (UI constraint de popover, no media).
+
+Quedan para siguiente run (ver sub-issue):
+- Lighthouse contrast check + remediación de colores custom.
+- Cypress (o Vitest + user-event) del flujo login → search → profile por teclado.
+
+---
+
+## Issue #6.2.b — A11y QA: contraste Lighthouse + test de navegación por teclado
+
 **Estado:** `pending`
 **Severidad:** Media (UX)
 
 ### Tareas
 
-- [ ] `aria-label` en todos los botones sólo-icono restantes (`containers/frontend/src/components/**`), revisión con `grep -RE "<Button.*size=\"icon\"" src/` para confirmar.
-- [ ] Aplicar `EmptyState`/`ErrorState`/`Skeleton` a: `ChatList`, `MessagingApp`, `NotificationBell` listings, `MyEvents`, `MyProjects`, `ReviewList`, `BlockedUsers`.
-- [ ] Asegurar `aria-labelledby`/`aria-describedby` en todos los `<Dialog>` y foco correcto al abrir.
-- [ ] Revisar contraste de colores custom (badges, shimmer) con Lighthouse contrast check.
-- [ ] Revisar alturas fijas (`h-[400px]`, `min-h-*`) y reemplazar por `aspect-ratio` cuando sea posible.
-- [ ] Añadir test Cypress de navegación por teclado que recorre el flujo de login → search → profile sin ratón.
-
-### Criterio de aceptación
-- Lighthouse accessibility score ≥ 90 en las rutas principales.
-- No hay botones sólo-icono sin `aria-label`.
+- [ ] Ejecutar Lighthouse sobre las rutas `/login`, `/auth/home`, `/auth/user/map`, `/auth/search`, `/auth/user/profile` y capturar los avisos de contraste.
+- [ ] Corregir los colores custom que fallen (badges en `MyProjects/MyEvents` con `text-gray-600` sobre fondo claro, shimmer de Skeleton, `text-amber-800` de `SupportPage` si aplica).
+- [ ] Añadir test Cypress o Vitest + `@testing-library/user-event` que navegue login → search → profile sólo con Tab/Enter/Shift+Tab y verifique que el foco nunca se pierde.
+- [ ] Criterio de aceptación: Lighthouse accessibility score ≥ 90 en las rutas principales y el test e2e de teclado pasa en CI.
 
 ---
 

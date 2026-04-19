@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Loader2, MessageSquare } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ListRowSkeleton } from '@/components/ui/skeleton-presets'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getConversations, Conversation } from '@/services/messaging/messagingApi'
@@ -93,21 +95,20 @@ export function ChatList({ onSelectConversation, selectedConversationId }: ChatL
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="p-3 h-full">
+        <ListRowSkeleton count={6} />
       </div>
     )
   }
 
   if (conversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <MessageSquare className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
-        <h3 className="text-lg font-semibold mb-2">No hay conversaciones</h3>
-        <p className="text-sm text-muted-foreground">
-          Busca un usuario en el mapa y comienza una conversación
-        </p>
-      </div>
+      <EmptyState
+        icon={MessageSquare}
+        title="No hay conversaciones"
+        description="Busca un usuario en el mapa y comienza una conversación"
+        className="h-full"
+      />
     )
   }
 

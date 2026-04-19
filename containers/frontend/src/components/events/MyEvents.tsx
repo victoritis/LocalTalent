@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { getMyEvents, getMyRSVPs, getMyInvitations } from '@/services/events/eventsApi'
-import { Calendar, MapPin, Users, Clock, Mail } from 'lucide-react'
+import { Calendar, MapPin, Users, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatDateTime } from '@/lib/date'
+import { EmptyState } from '@/components/ui/empty-state'
+import { GridCardSkeleton } from '@/components/ui/skeleton-presets'
+import { useNavigate } from '@tanstack/react-router'
 
 export function MyEvents() {
+  const navigate = useNavigate()
   const [myEvents, setMyEvents] = useState<any[]>([])
   const [myRSVPs, setMyRSVPs] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
@@ -130,8 +134,8 @@ export function MyEvents() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Clock className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4">
+        <GridCardSkeleton count={6} />
       </div>
     )
   }
@@ -140,7 +144,7 @@ export function MyEvents() {
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Calendar className="h-8 w-8" />
+          <Calendar className="h-8 w-8" aria-hidden="true" />
           Mis Eventos
         </h1>
         <p className="text-gray-600">Gestiona tus eventos y asistencias</p>
@@ -162,15 +166,14 @@ export function MyEvents() {
         {/* Eventos Creados */}
         <TabsContent value="created">
           {myEvents.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">Aún no has creado ningún evento</p>
-                <Link to="/auth/events/create">
-                  <Button>Crear Primer Evento</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Calendar}
+              title="Aún no has creado ningún evento"
+              action={{
+                label: "Crear Primer Evento",
+                onClick: () => navigate({ to: "/auth/events/create" }),
+              }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myEvents.map((event) => (
@@ -183,15 +186,14 @@ export function MyEvents() {
         {/* Asistencias */}
         <TabsContent value="attending">
           {myRSVPs.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">No has confirmado asistencia a ningún evento</p>
-                <Link to="/auth/events">
-                  <Button>Explorar Eventos</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Users}
+              title="No has confirmado asistencia a ningún evento"
+              action={{
+                label: "Explorar Eventos",
+                onClick: () => navigate({ to: "/auth/events" }),
+              }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myRSVPs.map((rsvp) => (
@@ -209,12 +211,10 @@ export function MyEvents() {
         {/* Invitaciones */}
         <TabsContent value="invitations">
           {invitations.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Mail className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No tienes invitaciones pendientes</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Mail}
+              title="No tienes invitaciones pendientes"
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {invitations.map((invitation) => (

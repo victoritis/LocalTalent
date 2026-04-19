@@ -244,8 +244,8 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
         </div>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon">
-              <SlidersHorizontal className="h-4 w-4" />
+            <Button variant="outline" size="icon" aria-label="Filtros de búsqueda avanzada">
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
             </Button>
           </SheetTrigger>
           <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
@@ -403,8 +403,13 @@ export function AdvancedSearch({ onResultsChange, initialFilters }: AdvancedSear
                 <Button variant="outline" onClick={clearFilters}>
                   Limpiar
                 </Button>
-                <Button variant="outline" size="icon" onClick={saveSearch}>
-                  <Bookmark className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={saveSearch}
+                  aria-label="Guardar búsqueda"
+                >
+                  <Bookmark className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
